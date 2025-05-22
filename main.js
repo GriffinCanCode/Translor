@@ -18,6 +18,11 @@ let mainWindow;
 const USER_DATA_PATH = path.join(app.getPath('userData'), 'userData.json');
 const LESSONS_DATA_PATH = path.join(app.getPath('userData'), 'lessons.json');
 
+// Audio stream management
+let activeAudioStreams = 0;
+const MAX_AUDIO_STREAMS = 10; // Reduced from 45 to prevent browser crashes
+const AUDIO_STREAMS_CLEANUP_THRESHOLD = 5;
+
 // Log application startup
 logger.info('Application starting', { version: app.getVersion(), env: process.env.NODE_ENV });
 
@@ -69,14 +74,32 @@ function createWindow() {
         'Content-Security-Policy': [
           "default-src 'self' 'unsafe-inline' 'unsafe-eval';",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
-          "connect-src 'self' ws: wss: https://api.openai.com https://*.openai.com;",
+          "connect-src 'self' ws: wss: https://api.openai.com https://*.openai.com https://api.elevenlabs.io https://*.elevenlabs.io https://libretranslate.com https://*.libretranslate.com https://translate.argosopentech.com https://translation.googleapis.com;",
           "img-src 'self' data: blob:;",
-          "media-src 'self' data: blob:;",
+          "media-src 'self' data: blob: file: filesystem:;",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
           "font-src 'self' https://fonts.gstatic.com;",
           "object-src 'none';"
         ].join(' ')
       }
+    });
+  });
+  
+  // Set environment variables for renderer process
+  // This will make API keys and other configuration available to the renderer
+  const envVarsForRenderer = {
+    REACT_APP_TRANSLATION_API_KEY: process.env.REACT_APP_TRANSLATION_API_KEY || '',
+    REACT_APP_ELEVENLABS_API_KEY: process.env.REACT_APP_ELEVENLABS_API_KEY || '',
+    REACT_APP_GOOGLE_API_KEY: process.env.REACT_APP_GOOGLE_API_KEY || '',
+    NODE_ENV: process.env.NODE_ENV || 'production'
+  };
+
+  // Make sure these environment variables are accessible in the renderer process
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript(`
+      window.env = ${JSON.stringify(envVarsForRenderer)};
+    `).catch(error => {
+      logger.error('Failed to inject environment variables', { error });
     });
   });
   
@@ -398,6 +421,51 @@ ipcMain.handle('log', (event, logData) => {
   return true;
 });
 
+// Audio stream management handlers
+ipcMain.handle('register-audio-stream', () => {
+  activeAudioStreams++;
+  logger.debug('Audio stream registered', { count: activeAudioStreams });
+  
+  // Check if we're approaching the limit
+  if (activeAudioStreams > MAX_AUDIO_STREAMS) {
+    logger.warn('Too many audio streams, forcing cleanup', { count: activeAudioStreams });
+    // Automatically reset the counter
+    const oldCount = activeAudioStreams;
+    activeAudioStreams = 0;
+    logger.info('Audio streams automatically reset', { oldCount, newCount: 0 });
+    
+    // Signal to renderer process to release audio streams
+    if (mainWindow) {
+      mainWindow.webContents.send('cleanup-audio-streams');
+    }
+    return { shouldProceed: false };
+  }
+  
+  return { shouldProceed: true };
+});
+
+ipcMain.handle('release-audio-stream', () => {
+  if (activeAudioStreams > 0) {
+    activeAudioStreams--;
+  }
+  logger.debug('Audio stream released', { count: activeAudioStreams });
+  
+  // If count is suspiciously high, reset it
+  if (activeAudioStreams > MAX_AUDIO_STREAMS) {
+    logger.warn('Audio stream count too high, resetting', { oldCount: activeAudioStreams });
+    activeAudioStreams = 0;
+  }
+  
+  return { success: true };
+});
+
+ipcMain.handle('reset-audio-streams', () => {
+  const oldCount = activeAudioStreams;
+  activeAudioStreams = 0;
+  logger.info('Audio streams reset', { oldCount, newCount: 0 });
+  return { success: true };
+});
+
 // Translation and speech API handlers would connect to external services
 // These are placeholder implementations
 ipcMain.handle('translate-text', async (_, text, targetLanguage, sourceLanguage) => {
@@ -420,6 +488,20 @@ ipcMain.handle('speech-to-text', async (_, audioData, language) => {
 ipcMain.handle('text-to-speech', async (_, text, language) => {
   // In a real app, this would generate audio from text
   logger.debug('Converting text to speech', { text, language });
+  
+  // Check if we can safely create another audio stream
+  if (activeAudioStreams > MAX_AUDIO_STREAMS) {
+    logger.warn('Maximum audio streams reached, skipping TTS', { count: activeAudioStreams });
+    return {
+      audioUrl: null,
+      error: 'Too many audio streams active'
+    };
+  }
+  
+  // Register this new audio stream
+  activeAudioStreams++;
+  logger.debug('Audio stream created for TTS', { count: activeAudioStreams });
+  
   return {
     audioUrl: '[Audio data would be returned here]'
   };
@@ -441,10 +523,103 @@ ipcMain.handle('stop-recording', async () => {
   };
 });
 
+ipcMain.handle('component-unmounting', (_, componentName) => {
+  if (componentName === 'Conversation') {
+    logger.debug('Conversation component unmounting, cleaning up resources');
+    if (mainWindow) {
+      mainWindow.webContents.send('cleanup-audio-streams');
+    }
+  }
+  return true;
+});
+
 // Example IPC handler (can be expanded)
 ipcMain.handle('example-ipc', async (event, arg) => {
   logger.debug('IPC message received', { arg });
   return `Response from main process: ${arg}`;
+});
+
+// ElevenLabs API proxy handler
+ipcMain.handle('call-elevenlabs-api', async (_, requestData) => {
+  const { method, endpoint, body } = requestData;
+  const apiKey = process.env.REACT_APP_ELEVENLABS_API_KEY;
+  
+  if (!apiKey) {
+    logger.error('ElevenLabs API key not configured');
+    return { success: false, error: 'API key not configured' };
+  }
+  
+  logger.debug('Proxying ElevenLabs API request', { 
+    method, 
+    endpoint: endpoint.replace(/\/[a-zA-Z0-9]+$/, '/[ID]') // Log redacted endpoint for privacy
+  });
+  
+  try {
+    const url = `https://api.elevenlabs.io/v1${endpoint}`;
+    
+    const options = {
+      method,
+      headers: {
+        'xi-api-key': apiKey
+      }
+    };
+    
+    if (body) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(body);
+    }
+    
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      logger.error('ElevenLabs API error', { status: response.status });
+      return { 
+        success: false, 
+        error: `API error: ${response.status}` 
+      };
+    }
+    
+    // Handle binary responses for audio
+    if (response.headers.get('content-type')?.includes('audio/')) {
+      const buffer = await response.arrayBuffer();
+      
+      // Convert ArrayBuffer to Base64
+      const audioBase64 = Buffer.from(buffer).toString('base64');
+      
+      // Create a data URL for audio
+      const contentType = response.headers.get('content-type');
+      const audioUrl = `data:${contentType};base64,${audioBase64}`;
+      
+      logger.debug('ElevenLabs API audio response processed', { 
+        size: buffer.byteLength 
+      });
+      
+      return {
+        success: true,
+        audioUrl,
+        audioSize: buffer.byteLength
+      };
+    } else {
+      // Handle JSON responses for other endpoints
+      const data = await response.json();
+      
+      logger.debug('ElevenLabs API JSON response processed');
+      
+      return {
+        success: true,
+        data
+      };
+    }
+  } catch (error) {
+    logger.error('Error calling ElevenLabs API', { 
+      error: error.message 
+    });
+    
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 });
 
 // Basic Express server setup (can be moved to a separate file)
@@ -482,4 +657,72 @@ function startServer(port) {
   }
 }
 
-startServer(PORT); 
+startServer(PORT);
+
+// Handler for checking network status in Electron
+ipcMain.handle('check-network-status', async () => {
+  return {
+    isRestricted: true, // Default to true in Electron since Web Speech API has issues
+    reason: "Electron restricts Web Speech API network access"
+  };
+});
+
+// Handler for Whisper speech recognition
+ipcMain.handle('use-whisper-speech-to-text', async (_, audioArrayBuffer, language) => {
+  try {
+    // Create buffer from ArrayBuffer
+    const buffer = Buffer.from(audioArrayBuffer);
+    
+    // Save to temp file
+    const tempFilePath = path.join(app.getPath('temp'), `speech-${Date.now()}.webm`);
+    fs.writeFileSync(tempFilePath, buffer);
+    
+    logger.info('Using Whisper for speech recognition', { 
+      language, 
+      audioSize: buffer.length,
+      tempFilePath
+    });
+    
+    // TODO: Implement actual Whisper transcription
+    // This is a placeholder that should be replaced with real Whisper implementation
+    return {
+      success: true,
+      text: "This is a placeholder for Whisper transcription. In a production app, this would use a real Whisper API.",
+      provider: 'whisper'
+    };
+  } catch (error) {
+    logger.error('Whisper speech recognition error', { error: error.message });
+    return {
+      success: false,
+      error: error.message,
+      provider: 'whisper'
+    };
+  }
+});
+
+// Handler for ElevenLabs speech recognition
+ipcMain.handle('use-elevenlabs-speech-to-text', async (_, audioArrayBuffer, language) => {
+  try {
+    // Create buffer from ArrayBuffer
+    const buffer = Buffer.from(audioArrayBuffer);
+    
+    logger.info('Using ElevenLabs for speech recognition', { 
+      language, 
+      audioSize: buffer.length 
+    });
+    
+    // This can be implemented if you have ElevenLabs API access
+    return {
+      success: false,
+      error: "ElevenLabs speech recognition not implemented yet",
+      provider: 'elevenlabs'
+    };
+  } catch (error) {
+    logger.error('ElevenLabs speech recognition error', { error: error.message });
+    return {
+      success: false,
+      error: error.message,
+      provider: 'elevenlabs'
+    };
+  }
+}); 

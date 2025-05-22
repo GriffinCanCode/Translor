@@ -78,23 +78,33 @@ class ChatGPTService {
       // Add user message to history
       this.addMessage(userId, 'user', userMessage);
 
+      // Check if API key is available
+      if (!this.apiKey) {
+        logger.warn('No OpenAI API key available, using mock response', { userId });
+        // Generate a mock response based on the target language
+        const responseText = this.getMockResponse(targetLanguage, userMessage || 'greeting');
+        
+        // Add assistant response to history
+        this.addMessage(userId, 'assistant', responseText);
+        
+        return responseText;
+      }
+
       // Prepare messages for API call
-      const messages = [...this.conversationHistory.get(userId)];
+      const messages = [...history];
 
       // Call OpenAI API
       logger.debug('Calling OpenAI API', { 
         userId,
-        model: 'gpt-4-turbo',
-        messagesCount: messages.length
+        historyLength: messages.length
       });
-      
-      const response = await axios.post(
-        this.apiUrl,
+
+      const response = await axios.post(this.apiUrl, 
         {
-          model: 'gpt-4-turbo',
+          model: 'gpt-3.5-turbo',
           messages: messages,
-          max_tokens: 150,
           temperature: 0.7,
+          max_tokens: 256
         },
         {
           headers: {
@@ -105,29 +115,59 @@ class ChatGPTService {
       );
 
       // Extract response text
-      const responseText = response.data.choices[0].message.content.trim();
-      logger.debug('Received ChatGPT response', { 
-        userId, 
-        responseLength: responseText.length,
-        promptTokens: response.data.usage?.prompt_tokens,
-        completionTokens: response.data.usage?.completion_tokens,
-        totalTokens: response.data.usage?.total_tokens
-      });
+      const responseText = response.data.choices[0].message.content;
       
       // Add assistant response to history
       this.addMessage(userId, 'assistant', responseText);
       
       return responseText;
     } catch (error) {
-      logger.error('Error calling ChatGPT API', { 
+      logger.error('Error generating response', { 
         userId,
-        error: error.message,
-        statusCode: error.response?.status,
-        statusText: error.response?.statusText,
-        errorData: error.response?.data
+        error: error.message
       });
-      throw new Error('Failed to get response from ChatGPT');
+      
+      // Fallback to mock response on error
+      logger.debug('Falling back to mock response due to error', { userId });
+      const responseText = this.getMockResponse(targetLanguage, userMessage || 'greeting');
+      this.addMessage(userId, 'assistant', responseText);
+      
+      return responseText;
     }
+  }
+
+  /**
+   * Generate a mock response based on the target language
+   * @param {string} language - Target language code
+   * @param {string} messageType - Type of message to generate response for
+   * @returns {string} - Mock response text
+   */
+  getMockResponse(language, messageType) {
+    // Sample responses for different languages
+    const greetings = {
+      'es': '¡Hola! Soy tu tutor de español. ¿Cómo puedo ayudarte hoy?',
+      'fr': 'Bonjour! Je suis votre tuteur de français. Comment puis-je vous aider aujourd\'hui?',
+      'de': 'Hallo! Ich bin dein Deutschlehrer. Wie kann ich dir heute helfen?',
+      'it': 'Ciao! Sono il tuo tutor di italiano. Come posso aiutarti oggi?',
+      'pt': 'Olá! Sou seu tutor de português. Como posso ajudá-lo hoje?',
+      'default': 'Hello! I am your language tutor. How can I help you today?'
+    };
+    
+    const responses = {
+      'es': '¡Muy bien! Vamos a practicar juntos. Puedes hacerme cualquier pregunta.',
+      'fr': 'Très bien! Pratiquons ensemble. Vous pouvez me poser n\'importe quelle question.',
+      'de': 'Sehr gut! Lass uns zusammen üben. Du kannst mir jede Frage stellen.',
+      'it': 'Molto bene! Pratichiamo insieme. Puoi farmi qualsiasi domanda.',
+      'pt': 'Muito bem! Vamos praticar juntos. Você pode me fazer qualquer pergunta.',
+      'default': 'Great! Let\'s practice together. You can ask me any question.'
+    };
+    
+    // Return appropriate response based on message type
+    if (messageType === 'greeting' || messageType.toLowerCase().includes('hello') || messageType.toLowerCase().includes('hi')) {
+      return greetings[language] || greetings['default'];
+    }
+    
+    return responses[language] || responses['default'];
   }
 
   /**
@@ -145,30 +185,42 @@ class ChatGPTService {
     });
     
     try {
-      const feedbackPrompt = `
-        As a language tutor, analyze this learner's ${targetLanguage} message: "${userInput}"
-        Provide feedback in JSON format with these fields:
-        - grammar: one key grammatical point to improve
-        - vocabulary: one vocabulary suggestion
-        - alternatives: alternative phrases they could use
-        - practice: a suggestion for practice
-        
-        Format as valid JSON only, without explanation or conversation.
-      `;
-
-      logger.debug('Calling OpenAI API for feedback', { 
-        userId,
-        model: 'gpt-4-turbo',
-        targetLanguage
-      });
+      // Check if API key is available
+      if (!this.apiKey) {
+        logger.warn('No OpenAI API key available, using mock feedback', { userId });
+        // Sample feedback based on target language
+        return {
+          title: 'Learning Tip',
+          grammar: 'Focus on verb conjugation in your sentences.',
+          vocabulary: 'Try using more varied adjectives to describe things.',
+          alternatives: 'Consider using different greetings like "Buenos días" or "Buenas tardes".',
+          practice: 'Practice asking questions using the correct word order.'
+        };
+      }
       
-      const response = await axios.post(
-        this.apiUrl,
+      // Prepare prompt for feedback generation
+      const prompt = `
+        As a language tutor for ${targetLanguage}, provide constructive feedback on this student input:
+        "${userInput}"
+        
+        Format your response as JSON with these fields:
+        - grammar: main grammar point to improve
+        - vocabulary: suggestion for vocabulary improvement
+        - alternatives: alternative phrases they could use
+        - practice: specific practice suggestion
+      `;
+      
+      logger.debug('Calling OpenAI API for feedback', { userId });
+      
+      const response = await axios.post(this.apiUrl, 
         {
-          model: 'gpt-4-turbo',
-          messages: [{ role: 'user', content: feedbackPrompt }],
-          max_tokens: 300,
-          temperature: 0.3,
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a helpful language tutor. Respond only with JSON.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 512
         },
         {
           headers: {
@@ -177,42 +229,52 @@ class ChatGPTService {
           }
         }
       );
-
-      const feedbackText = response.data.choices[0].message.content.trim();
-      logger.debug('Received feedback response', {
-        userId,
-        responseLength: feedbackText.length,
-        promptTokens: response.data.usage?.prompt_tokens,
-        completionTokens: response.data.usage?.completion_tokens
-      });
       
-      // Parse JSON response
+      // Parse the JSON response
+      const responseText = response.data.choices[0].message.content;
+      
       try {
-        return JSON.parse(feedbackText);
-      } catch (parseError) {
-        logger.error('Error parsing feedback JSON', { 
-          userId,
-          error: parseError.message,
-          rawResponse: feedbackText
-        });
-        // Fallback structure if JSON parsing fails
+        // Extract JSON from response (handling potential text wrapping)
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : responseText;
+        const feedback = JSON.parse(jsonString);
+        
         return {
           title: 'Learning Tip',
-          grammar: 'Focus on sentence structure',
-          vocabulary: 'Try expanding your vocabulary',
-          alternatives: 'Consider using different expressions',
-          practice: 'Practice making questions'
+          ...feedback
+        };
+      } catch (jsonError) {
+        logger.error('Error parsing feedback JSON', { 
+          userId,
+          error: jsonError.message,
+          responseText
+        });
+        
+        // Fallback to structured format if JSON parsing fails
+        return {
+          title: 'Learning Tip',
+          grammar: responseText.includes('grammar') ? 
+            responseText.split('grammar')[1].split('\n')[0].replace(/[:\-]/g, '').trim() : 
+            'Focus on your grammar structure.',
+          vocabulary: 'Try using more varied vocabulary.',
+          alternatives: 'Consider alternative phrasing.',
+          practice: 'Continue practicing consistently.'
         };
       }
     } catch (error) {
       logger.error('Error generating feedback', { 
         userId,
-        error: error.message,
-        statusCode: error.response?.status,
-        statusText: error.response?.statusText,
-        errorData: error.response?.data
+        error: error.message
       });
-      throw new Error('Failed to generate feedback');
+      
+      // Fallback to mock feedback on error
+      return {
+        title: 'Learning Tip',
+        grammar: 'Focus on verb conjugation in your sentences.',
+        vocabulary: 'Try using more varied adjectives to describe things.',
+        alternatives: 'Consider using different greetings like "Buenos días" or "Buenas tardes".',
+        practice: 'Practice asking questions using the correct word order.'
+      };
     }
   }
 

@@ -1,18 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../contexts/TranslationContext';
+import { useBrowserSpeech } from '../../contexts/BrowserSpeechContext';
+import { useElevenLabs } from '../../contexts/ElevenLabsContext';
+import { useWhisper } from '../../contexts/WhisperContext';
+import { useUser } from '../../contexts/UserContext';
 
 function Settings() {
   const { theme, setTheme, effectiveTheme, currentSystemTheme } = useTheme();
+  const { updateSettings, settings } = useUser();
+  const { ttsProvider, sttProvider } = useTranslation();
+  const { isAvailable: browserSpeechAvailable, voices: browserVoices } = useBrowserSpeech();
+  const { isAvailable: elevenLabsAvailable, voices: elevenLabsVoices, loading: elevenLabsLoading } = useElevenLabs();
+  const { isAvailable: whisperAvailable } = useWhisper();
+  
   const [language, setLanguage] = useState('english');
   const [notifications, setNotifications] = useState(true);
   const [savedSettings, setSavedSettings] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
+  const [selectedTtsProvider, setSelectedTtsProvider] = useState(ttsProvider);
+  const [selectedSttProvider, setSelectedSttProvider] = useState(sttProvider);
+  const [voiceSpeed, setVoiceSpeed] = useState(settings?.voiceSpeed || 1);
+
+  // Load user settings on mount
+  useEffect(() => {
+    if (settings) {
+      setTheme(settings.theme || 'light');
+      setNotifications(settings.notifications !== false);
+      setVoiceSpeed(settings.voiceSpeed || 1);
+    }
+  }, [settings]);
 
   useEffect(() => {
     // Load settings from electron API
     const loadSettings = async () => {
       try {
-        const settings = await window.api.getUserSettings();
+        const settings = await window.electronAPI.getUserSettings();
         if (settings) {
           setLanguage(settings.language || 'english');
           setNotifications(settings.notifications ?? true);
@@ -34,9 +57,16 @@ function Settings() {
         language,
         theme,
         notifications,
+        voiceSpeed,
+        ttsProvider: selectedTtsProvider,
+        sttProvider: selectedSttProvider
       };
       
-      await window.api.saveUserSettings(newSettings);
+      await window.electronAPI.saveUserSettings(newSettings);
+      
+      // Also update the user context
+      updateSettings(newSettings);
+      
       setSaveStatus('Settings saved successfully');
       setSavedSettings(newSettings);
       
@@ -69,6 +99,63 @@ function Settings() {
               <option value="french">French</option>
               <option value="german">German</option>
               <option value="chinese">Chinese</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="settings-section">
+          <h2 className="settings-heading">Text-to-Speech Settings</h2>
+          
+          <div className="settings-form-group">
+            <label htmlFor="ttsProvider" className="settings-label">TTS Provider</label>
+            <select 
+              id="ttsProvider" 
+              className="settings-select"
+              value={selectedTtsProvider}
+              onChange={(e) => setSelectedTtsProvider(e.target.value)}
+            >
+              <option value="browser">Browser</option>
+              <option value="elevenlabs" disabled={!elevenLabsAvailable}>
+                ElevenLabs {!elevenLabsAvailable && '(Not Available)'}
+              </option>
+            </select>
+          </div>
+          
+          <div className="settings-form-group">
+            <label htmlFor="voiceSpeed" className="settings-label">Speech Speed</label>
+            <input
+              type="range"
+              id="voiceSpeed"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={voiceSpeed}
+              onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs">
+              <span>Slow</span>
+              <span>Normal</span>
+              <span>Fast</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="settings-section">
+          <h2 className="settings-heading">Speech Recognition Settings</h2>
+          
+          <div className="settings-form-group">
+            <label htmlFor="sttProvider" className="settings-label">Speech Recognition Provider</label>
+            <select 
+              id="sttProvider" 
+              className="settings-select"
+              value={selectedSttProvider}
+              onChange={(e) => setSelectedSttProvider(e.target.value)}
+            >
+              <option value="browser">Browser</option>
+              <option value="whisper" disabled={!whisperAvailable}>
+                OpenAI Whisper {!whisperAvailable && '(Not Available)'}
+              </option>
             </select>
           </div>
         </div>

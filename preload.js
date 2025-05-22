@@ -26,14 +26,31 @@ contextBridge.exposeInMainWorld(
     textToSpeech: (text, language) => 
       ipcRenderer.invoke('text-to-speech', text, language),
     
+    // Speech recognition fallback services
+    checkNetworkStatus: () => ipcRenderer.invoke('check-network-status'),
+    useWhisperSpeechToText: (audioBlob, language) => ipcRenderer.invoke('use-whisper-speech-to-text', audioBlob, language),
+    useElevenLabsSpeechToText: (audioBlob, language) => ipcRenderer.invoke('use-elevenlabs-speech-to-text', audioBlob, language),
+    
+    // ElevenLabs API proxy
+    callElevenLabsApi: (requestData) => 
+      ipcRenderer.invoke('call-elevenlabs-api', requestData),
+    
     // Recording
     startRecording: () => ipcRenderer.send('start-recording'),
     stopRecording: () => ipcRenderer.invoke('stop-recording'),
     
-<<<<<<< HEAD
-    // Logging - single handler to simplify the process
-    log: (logData) => ipcRenderer.invoke('log', logData)
-=======
+    // Audio stream management
+    registerAudioStream: () => ipcRenderer.invoke('register-audio-stream'),
+    releaseAudioStream: () => ipcRenderer.invoke('release-audio-stream'),
+    resetAudioStreams: () => ipcRenderer.invoke('reset-audio-streams'),
+    componentUnmounting: (componentName) => ipcRenderer.invoke('component-unmounting', componentName),
+    
+    // Cleanup event listener
+    onCleanupAudioStreams: (callback) => {
+      ipcRenderer.on('cleanup-audio-streams', () => callback());
+      return () => ipcRenderer.removeListener('cleanup-audio-streams', callback);
+    },
+    
     // Theme handling
     onSystemThemeChange: (callback) => {
       ipcRenderer.on('system-theme-changed', (_, theme) => callback(theme));
@@ -45,8 +62,10 @@ contextBridge.exposeInMainWorld(
     // Add any other APIs your app needs
     saveUserProgress: (progress) => ipcRenderer.invoke('save-user-progress', progress),
     getLesson: (lessonId) => ipcRenderer.invoke('get-lesson', lessonId),
-    saveLesson: (lesson) => ipcRenderer.invoke('save-lesson', lesson)
->>>>>>> origin/Brian
+    saveLesson: (lesson) => ipcRenderer.invoke('save-lesson', lesson),
+    
+    // Logging - single handler to simplify the process
+    log: (logData) => ipcRenderer.invoke('log', logData)
   }
 );
 

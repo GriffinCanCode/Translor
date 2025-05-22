@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld(
-  'api', {
+  'electronAPI', {
     // User settings and progress
     getUserSettings: () => ipcRenderer.invoke('get-user-settings'),
     getUserProgress: () => ipcRenderer.invoke('get-user-progress'),
@@ -26,10 +26,44 @@ contextBridge.exposeInMainWorld(
     textToSpeech: (text, language) => 
       ipcRenderer.invoke('text-to-speech', text, language),
     
+    // Speech recognition fallback services
+    checkNetworkStatus: () => ipcRenderer.invoke('check-network-status'),
+    useWhisperSpeechToText: (audioBlob, language) => ipcRenderer.invoke('use-whisper-speech-to-text', audioBlob, language),
+    useElevenLabsSpeechToText: (audioBlob, language) => ipcRenderer.invoke('use-elevenlabs-speech-to-text', audioBlob, language),
+    
+    // ElevenLabs API proxy
+    callElevenLabsApi: (requestData) => 
+      ipcRenderer.invoke('call-elevenlabs-api', requestData),
+    
     // Recording
     startRecording: () => ipcRenderer.send('start-recording'),
-    stopRecording: () => ipcRenderer.invoke('stop-recording')
+    stopRecording: () => ipcRenderer.invoke('stop-recording'),
+    
+    // Audio stream management
+    registerAudioStream: () => ipcRenderer.invoke('register-audio-stream'),
+    releaseAudioStream: () => ipcRenderer.invoke('release-audio-stream'),
+    resetAudioStreams: () => ipcRenderer.invoke('reset-audio-streams'),
+    componentUnmounting: (componentName) => ipcRenderer.invoke('component-unmounting', componentName),
+    
+    // Cleanup event listener
+    onCleanupAudioStreams: (callback) => {
+      ipcRenderer.on('cleanup-audio-streams', () => callback());
+      return () => ipcRenderer.removeListener('cleanup-audio-streams', callback);
+    },
+    
+    // Logging - single handler to simplify the process
+    log: (logData) => ipcRenderer.invoke('log', logData)
   }
 );
+
+// Expose environment variables to the renderer process
+contextBridge.exposeInMainWorld('env', {
+  REACT_APP_OPENAI_API_KEY: process.env.REACT_APP_OPENAI_API_KEY,
+  REACT_APP_TRANSLATION_API_KEY: process.env.REACT_APP_TRANSLATION_API_KEY,
+  REACT_APP_TTS_PROVIDER: process.env.REACT_APP_TTS_PROVIDER,
+  REACT_APP_STT_PROVIDER: process.env.REACT_APP_STT_PROVIDER,
+  REACT_APP_ELEVENLABS_API_KEY: process.env.REACT_APP_ELEVENLABS_API_KEY,
+  NODE_ENV: process.env.NODE_ENV
+});
 
 console.log('Preload script loaded.'); 

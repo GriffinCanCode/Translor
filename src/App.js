@@ -32,8 +32,13 @@ function App() {
     });
     
     // In development mode, validate that all CSS files are loaded properly
+    // Use setTimeout to ensure DOM and styles are fully loaded
     if (process.env.NODE_ENV === 'development') {
-      validateCssFiles();
+      // Run first validation after short delay to allow initial styles to load
+      setTimeout(validateCssFiles, 500);
+      
+      // Run second validation after longer delay to catch any async loaded styles
+      setTimeout(validateCssFiles, 2000);
     }
     
     // Set up global error handler for uncaught errors
@@ -73,65 +78,50 @@ function App() {
   }, [logger]);
 
   return (
-<<<<<<< HEAD
     <ErrorBoundary>
-=======
-    <ThemeProvider>
->>>>>>> origin/Brian
-      <UserProvider>
-        <LessonProvider>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-<<<<<<< HEAD
-              <Route index element={
-                <ErrorBoundary showResetButton>
-                  <Dashboard />
-                </ErrorBoundary>
-              } />
-              <Route path="conversation" element={
-                <ErrorBoundary showResetButton>
-                  <Conversation />
-                </ErrorBoundary>
-              } />
-              <Route path="lessons" element={
-                <ErrorBoundary showResetButton>
-                  <Lessons />
-                </ErrorBoundary>
-              } />
-              <Route path="lessons/:lessonId" element={
-                <ErrorBoundary showResetButton>
-                  <LessonDetail />
-                </ErrorBoundary>
-              } />
-              <Route path="profile" element={
-                <ErrorBoundary showResetButton>
-                  <Profile />
-                </ErrorBoundary>
-              } />
-              <Route path="settings" element={
-                <ErrorBoundary showResetButton>
-                  <Settings />
-                </ErrorBoundary>
-              } />
-=======
-              <Route index element={<Dashboard />} />
-              <Route path="conversation" element={<Conversation />} />
-              <Route path="lessons" element={<Lessons />} />
-              <Route path="lessons/:lessonId" element={<LessonDetail />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
->>>>>>> origin/Brian
-              <Route path="404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Route>
-          </Routes>
-        </LessonProvider>
-      </UserProvider>
-<<<<<<< HEAD
+      <ThemeProvider>
+        <UserProvider>
+          <LessonProvider>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={
+                  <ErrorBoundary showResetButton>
+                    <Dashboard />
+                  </ErrorBoundary>
+                } />
+                <Route path="conversation" element={
+                  <ErrorBoundary showResetButton>
+                    <Conversation />
+                  </ErrorBoundary>
+                } />
+                <Route path="lessons" element={
+                  <ErrorBoundary showResetButton>
+                    <Lessons />
+                  </ErrorBoundary>
+                } />
+                <Route path="lessons/:lessonId" element={
+                  <ErrorBoundary showResetButton>
+                    <LessonDetail />
+                  </ErrorBoundary>
+                } />
+                <Route path="profile" element={
+                  <ErrorBoundary showResetButton>
+                    <Profile />
+                  </ErrorBoundary>
+                } />
+                <Route path="settings" element={
+                  <ErrorBoundary showResetButton>
+                    <Settings />
+                  </ErrorBoundary>
+                } />
+                <Route path="404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Route>
+            </Routes>
+          </LessonProvider>
+        </UserProvider>
+      </ThemeProvider>
     </ErrorBoundary>
-=======
-    </ThemeProvider>
->>>>>>> origin/Brian
   );
 }
 

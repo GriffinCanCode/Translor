@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '../../contexts/UserContext';
-import TranslationService from '../../services/TranslationService';
-import ChatGPTService from '../../services/ChatGPTService';
+import { useTranslation } from '../../contexts/TranslationContext';
+import { useChatGPT } from '../../contexts/ChatGPTContext';
 import useLogger from '../../utils/useLogger';
 
 // Import components
@@ -16,8 +16,13 @@ const generateUniqueId = () => {
   return `${Date.now()}-${messageIdCounter}`;
 };
 
+// Track if initialization has happened to prevent loops
+let hasInitialized = false;
+
 const Conversation = () => {
   const { targetLanguage, nativeLanguage, addXp, userId, proficiencyLevel } = useUser();
+  const { translateText, textToSpeech, startRecording, stopRecording, speechToText, isRecording: translationIsRecording } = useTranslation();
+  const { getResponse, generateFeedback, clearConversation } = useChatGPT();
   const logger = useLogger({ component: 'Conversation', userId });
   
   const [messages, setMessages] = useState([]);
@@ -29,6 +34,7 @@ const Conversation = () => {
   
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
+  const initializationRef = useRef(false);
 
   // Log component initialization
   useEffect(() => {
@@ -38,10 +44,36 @@ const Conversation = () => {
       proficiencyLevel 
     });
     
+    // Reset audio streams counter when component mounts
+    if (window.electronAPI) {
+      window.electronAPI.resetAudioStreams();
+    }
+    
     return () => {
-      logger.debug('Conversation component unmounting');
+      logger.debug('Conversation component unmounting, cleaning up resources');
+      
+      // Notify main process about component unmounting for cleanup
+      if (window.electronAPI) {
+        window.electronAPI.componentUnmounting('Conversation');
+      }
+      
+      // Release any audio resources
+      if (audioRef.current?.src) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current.src = '';
+      }
+      
+      // Stop any speech synthesis
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      
+      // Clear conversation history
+      logger.debug('Clearing conversation history');
+      clearConversation(userId);
     };
-  }, [logger, targetLanguage, nativeLanguage, proficiencyLevel]);
+  }, [logger, targetLanguage, nativeLanguage, proficiencyLevel, userId, clearConversation]);
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -58,16 +90,60 @@ const Conversation = () => {
       audioRef.current.onended = () => {
         setIsAudioPlaying(false);
         logger.debug('Audio playback ended');
+        
+        // Release audio stream when done
+        if (window.electronAPI) {
+          window.electronAPI.releaseAudioStream();
+        }
       };
       audioRef.current.onpause = () => {
         setIsAudioPlaying(false);
         logger.debug('Audio playback paused');
       };
+      audioRef.current.onerror = () => {
+        setIsAudioPlaying(false);
+        logger.debug('Audio playback error');
+        
+        // Release audio stream on error
+        if (window.electronAPI) {
+          window.electronAPI.releaseAudioStream();
+        }
+      };
     }
+    
+    // Set up cleanup listener
+    let cleanupListener;
+    if (window.electronAPI) {
+      cleanupListener = window.electronAPI.onCleanupAudioStreams(() => {
+        logger.debug('Received audio cleanup request');
+        if (audioRef.current) {
+          audioRef.current.pause();
+          if (audioRef.current.src) {
+            URL.revokeObjectURL(audioRef.current.src);
+            audioRef.current.src = '';
+          }
+        }
+        setIsAudioPlaying(false);
+      });
+    }
+    
+    // Cleanup function
+    return () => {
+      if (cleanupListener) {
+        cleanupListener();
+      }
+    };
   }, [audioRef, logger]);
 
   // Handle initial greeting when component mounts
   useEffect(() => {
+    // Use initialization ref to prevent multiple greetings on re-render
+    if (initializationRef.current) {
+      return;
+    }
+    
+    initializationRef.current = true;
+    
     const greetUser = async () => {
       logger.info('Starting initial greeting');
       try {
@@ -75,7 +151,7 @@ const Conversation = () => {
         
         // Get AI greeting in target language
         logger.debug('Requesting AI greeting', { targetLanguage });
-        const greeting = await ChatGPTService.getResponse(
+        const greeting = await getResponse(
           userId, 
           targetLanguage, 
           "Initial greeting", 
@@ -87,7 +163,7 @@ const Conversation = () => {
           from: targetLanguage, 
           to: nativeLanguage 
         });
-        const translation = await TranslationService.translateText(
+        const translation = await translateText(
           greeting, 
           nativeLanguage, 
           targetLanguage
@@ -125,13 +201,7 @@ const Conversation = () => {
     };
     
     greetUser();
-    
-    // Clean up conversation history when component unmounts
-    return () => {
-      logger.debug('Clearing conversation history');
-      ChatGPTService.clearConversation(userId);
-    };
-  }, [userId, targetLanguage, nativeLanguage, proficiencyLevel, logger]);
+  }, [userId, targetLanguage, nativeLanguage, proficiencyLevel, logger, getResponse, translateText]);
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -176,7 +246,7 @@ const Conversation = () => {
         from: nativeLanguage, 
         to: targetLanguage 
       });
-      const translation = await TranslationService.translateText(
+      const translation = await translateText(
         inputText, 
         targetLanguage,
         nativeLanguage
@@ -204,7 +274,7 @@ const Conversation = () => {
     try {
       // Get AI response from ChatGPT
       logger.debug('Requesting AI response');
-      const aiResponseText = await ChatGPTService.getResponse(
+      const aiResponseText = await getResponse(
         userId,
         targetLanguage,
         translatedUserInput,
@@ -216,7 +286,7 @@ const Conversation = () => {
         from: targetLanguage, 
         to: nativeLanguage 
       });
-      const translation = await TranslationService.translateText(
+      const translation = await translateText(
         aiResponseText, 
         nativeLanguage, 
         targetLanguage
@@ -235,7 +305,7 @@ const Conversation = () => {
       
       // Generate learning feedback based on conversation
       logger.debug('Generating learning feedback');
-      const feedback = await ChatGPTService.generateFeedback(
+      const feedback = await generateFeedback(
         userId, 
         translatedUserInput, 
         targetLanguage
@@ -281,7 +351,7 @@ const Conversation = () => {
       setIsRecording(true);
       
       try {
-        await TranslationService.startRecording();
+        await startRecording();
       } catch (error) {
         logger.error('Failed to start recording', { error: error.message });
         setIsRecording(false);
@@ -294,7 +364,7 @@ const Conversation = () => {
       
       try {
         // Get recording data
-        const recordingResult = await TranslationService.stopRecording();
+        const recordingResult = await stopRecording();
         
         if (!recordingResult.success) {
           throw new Error('Recording failed');
@@ -306,7 +376,7 @@ const Conversation = () => {
         
         // Convert speech to text
         logger.debug('Converting speech to text', { sourceLanguage: nativeLanguage });
-        const speechResult = await TranslationService.speechToText(
+        const speechResult = await speechToText(
           recordingResult.audioBlob,
           nativeLanguage
         );
@@ -334,7 +404,7 @@ const Conversation = () => {
           from: nativeLanguage,
           to: targetLanguage
         });
-        const translation = await TranslationService.translateText(
+        const translation = await translateText(
           speechResult.text,
           targetLanguage,
           nativeLanguage
@@ -374,10 +444,16 @@ const Conversation = () => {
         // Stop any currently playing audio
         audioRef.current.pause();
         URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current.src = '';
+        
+        // Release the previous audio stream
+        if (window.electronAPI) {
+          window.electronAPI.releaseAudioStream();
+        }
       }
       
       // Get TTS audio
-      const ttsResult = await TranslationService.textToSpeech(text, language);
+      const ttsResult = await textToSpeech(text, language);
       
       if (!ttsResult.success) {
         logger.warn('Text-to-speech failed', { error: ttsResult.error });
@@ -386,11 +462,29 @@ const Conversation = () => {
       
       logger.debug('Speech audio generated', { provider: ttsResult.provider });
       
+      // In development mode with simplified browser TTS, we may not have an audioUrl
+      if (!ttsResult.audioUrl) {
+        logger.debug('No audio URL returned, using native speech synthesis only');
+        return;
+      }
+      
       // Update audio element
       audioRef.current.src = ttsResult.audioUrl;
-      audioRef.current.play();
+      audioRef.current.play().catch(error => {
+        logger.error('Error playing audio', { error: error.message });
+        
+        // Release the audio stream on playback error
+        if (window.electronAPI) {
+          window.electronAPI.releaseAudioStream();
+        }
+      });
     } catch (error) {
       logger.error('Error in text-to-speech', { error: error.message });
+      
+      // Ensure we release the audio stream on error
+      if (window.electronAPI) {
+        window.electronAPI.releaseAudioStream();
+      }
     }
   };
 
