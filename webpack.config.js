@@ -1,16 +1,19 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
+  const isProduction = !isDevelopment;
 
   return {
     entry: './src/index.js', // Entry point of your React app
     output: {
       path: path.resolve(__dirname, 'dist'), // Output directory for bundled files
-      filename: 'bundle.js',
-      publicPath: '/'
+      filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
+      publicPath: isProduction ? './' : '/',
+      clean: true // Clean the output directory before emit
     },
     target: 'web', // Target environment (web for renderer process)
     devtool: isDevelopment ? 'eval-source-map' : 'source-map',
@@ -25,6 +28,32 @@ module.exports = (env, argv) => {
         'Access-Control-Allow-Origin': '*',
       },
     },
+    optimization: {
+      minimize: isProduction,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              drop_console: isProduction,
+            },
+            format: {
+              comments: false,
+            },
+          },
+          extractComments: false,
+        }),
+      ],
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    },
     module: {
       rules: [
         {
@@ -36,7 +65,11 @@ module.exports = (env, argv) => {
         },
         {
           test: /\.css$/,
-          use: ['style-loader', 'css-loader', 'postcss-loader']
+          use: [
+            isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
+            'css-loader',
+            'postcss-loader'
+          ]
         },
         {
           test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -52,9 +85,22 @@ module.exports = (env, argv) => {
       new HtmlWebpackPlugin({
         template: './src/index.html', // Path to your source HTML file
         filename: 'index.html',
+        minify: isProduction ? {
+          removeComments: true,
+          collapseWhitespace: true,
+          removeRedundantAttributes: true,
+          useShortDoctype: true,
+          removeEmptyAttributes: true,
+          removeStyleLinkTypeAttributes: true,
+          keepClosingSlash: true,
+          minifyJS: true,
+          minifyCSS: true,
+          minifyURLs: true,
+        } : false,
       }),
-      !isDevelopment && new MiniCssExtractPlugin({
-        filename: 'styles.css',
+      isProduction && new MiniCssExtractPlugin({
+        filename: '[name].[contenthash].css',
+        chunkFilename: '[id].[contenthash].css',
       }),
     ].filter(Boolean),
     resolve: {

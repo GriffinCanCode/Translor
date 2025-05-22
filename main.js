@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const Store = require('electron-store');
+const store = new Store();
 const isDev = process.env.NODE_ENV === 'development';
 
 // Keep a global reference of the window object to avoid garbage collection
@@ -9,6 +11,27 @@ let mainWindow;
 // User data paths
 const USER_DATA_PATH = path.join(app.getPath('userData'), 'userData.json');
 const LESSONS_DATA_PATH = path.join(app.getPath('userData'), 'lessons.json');
+
+// Initialize store with default values if empty
+if (!store.has('userSettings')) {
+  store.set('userSettings', {
+    nativeLanguage: 'en',
+    learningLanguage: 'es',
+    dailyGoal: 10,
+    notifications: true,
+    theme: 'light'
+  });
+}
+
+if (!store.has('userProgress')) {
+  store.set('userProgress', {
+    completedLessons: [],
+    xp: 0,
+    streak: 0,
+    lastActive: new Date().toISOString(),
+    achievements: []
+  });
+}
 
 // Create the browser window
 function createWindow() {
@@ -22,7 +45,8 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'assets/icon.png')
+    icon: path.join(__dirname, 'assets/icon.png'),
+    show: false
   });
 
   // Load the app
@@ -35,6 +59,10 @@ function createWindow() {
     // In production, load from dist directory
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
 
   // Emitted when the window is closed
   mainWindow.on('closed', () => {
@@ -174,186 +202,150 @@ function getLessonsData() {
 }
 
 // IPC handlers for communication with renderer process
-ipcMain.handle('get-user-settings', () => {
-  const userData = getUserData();
-  return userData ? {
-    name: userData.user.name,
-    email: userData.user.email,
-    avatarUrl: userData.user.avatarUrl,
-    targetLanguage: userData.targetLanguage,
-    nativeLanguage: userData.nativeLanguage
-  } : null;
+ipcMain.handle('get-user-settings', async () => {
+  return store.get('userSettings');
 });
 
-ipcMain.handle('get-user-progress', () => {
-  const userData = getUserData();
-  return userData ? {
-    xp: userData.xp,
-    level: userData.level,
-    streak: userData.streak,
-    achievements: userData.achievements,
-    lessonProgress: userData.lessonProgress
-  } : null;
+ipcMain.handle('get-user-progress', async () => {
+  return store.get('userProgress');
 });
 
-ipcMain.handle('save-progress', (event, progressData) => {
-  const userData = getUserData();
-  if (!userData) return false;
+ipcMain.handle('save-progress', async (_, progressData) => {
+  const currentProgress = store.get('userProgress');
+  store.set('userProgress', { ...currentProgress, ...progressData });
+  return { success: true };
+});
 
-  // Update user data with new progress
-  Object.assign(userData, progressData);
+ipcMain.handle('update-xp', async (_, amount) => {
+  const currentProgress = store.get('userProgress');
+  const newXP = currentProgress.xp + amount;
+  store.set('userProgress.xp', newXP);
   
-  return saveUserData(userData);
-});
-
-ipcMain.handle('update-xp', (event, amount) => {
-  const userData = getUserData();
-  if (!userData) return false;
-
-  userData.xp += amount;
+  // Check for streak update
+  const lastActive = new Date(currentProgress.lastActive);
+  const today = new Date();
+  const oneDayMs = 24 * 60 * 60 * 1000;
   
-  // Calculate new level based on XP
-  userData.level = Math.floor(Math.sqrt(userData.xp / 100)) + 1;
-  
-  return saveUserData(userData);
-});
-
-ipcMain.handle('save-user-settings', (event, settings) => {
-  const userData = getUserData();
-  if (!userData) return false;
-
-  // Update user data with new settings
-  if (settings.name) userData.user.name = settings.name;
-  if (settings.email) userData.user.email = settings.email;
-  if (settings.avatarUrl) userData.user.avatarUrl = settings.avatarUrl;
-  if (settings.targetLanguage) userData.targetLanguage = settings.targetLanguage;
-  if (settings.nativeLanguage) userData.nativeLanguage = settings.nativeLanguage;
-  
-  return saveUserData(userData);
-});
-
-ipcMain.handle('unlock-achievement', (event, achievementId) => {
-  const userData = getUserData();
-  if (!userData) return false;
-
-  // Add achievement if not already unlocked
-  if (!userData.achievements.includes(achievementId)) {
-    userData.achievements.push(achievementId);
-    return saveUserData(userData);
+  if (today - lastActive > oneDayMs) {
+    const yesterday = new Date(today - oneDayMs);
+    const isConsecutiveDay = 
+      lastActive.getDate() === yesterday.getDate() &&
+      lastActive.getMonth() === yesterday.getMonth() &&
+      lastActive.getFullYear() === yesterday.getFullYear();
+    
+    if (isConsecutiveDay) {
+      store.set('userProgress.streak', currentProgress.streak + 1);
+    } else {
+      store.set('userProgress.streak', 1);
+    }
   }
   
-  return true;
-});
-
-ipcMain.handle('get-lessons', () => {
-  return getLessonsData();
-});
-
-ipcMain.handle('get-lesson-by-id', (event, lessonId) => {
-  const lessonsData = getLessonsData();
-  if (!lessonsData) return null;
-
-  const lesson = lessonsData.lessons.find(l => l.id === lessonId);
-  if (!lesson) return null;
-
-  // In a real app, this would load the lesson content from a database
-  // For demonstration, we'll generate some content based on the lesson ID
-  return {
-    ...lesson,
-    elements: generateLessonContent(lesson.id, lesson.title)
+  store.set('userProgress.lastActive', today.toISOString());
+  
+  return { 
+    xp: newXP, 
+    streak: store.get('userProgress.streak')
   };
 });
 
-// Mock translation service - in a real app, this would call a translation API
-ipcMain.handle('translate-text', (event, text, targetLanguage, sourceLanguage) => {
-  // Mock translation (just append language code in a real app)
-  return {
-    originalText: text,
-    translatedText: `[${targetLanguage}] ${text}`,
-    sourceLanguage: sourceLanguage || 'auto',
-    targetLanguage
+ipcMain.handle('save-user-settings', async (_, settings) => {
+  store.set('userSettings', settings);
+  return { success: true };
+});
+
+ipcMain.handle('unlock-achievement', async (_, achievementId) => {
+  const currentProgress = store.get('userProgress');
+  if (!currentProgress.achievements.includes(achievementId)) {
+    const updatedAchievements = [...currentProgress.achievements, achievementId];
+    store.set('userProgress.achievements', updatedAchievements);
+    return { success: true, achievements: updatedAchievements };
+  }
+  return { success: false, message: 'Achievement already unlocked' };
+});
+
+ipcMain.handle('get-lessons', async () => {
+  try {
+    const lessonsPath = isDev 
+      ? path.join(__dirname, 'src/lessons') 
+      : path.join(process.resourcesPath, 'lessons');
+    
+    const files = fs.readdirSync(lessonsPath)
+      .filter(file => file.endsWith('.json'));
+    
+    const lessons = files.map(file => {
+      const data = fs.readFileSync(path.join(lessonsPath, file), 'utf8');
+      return JSON.parse(data);
+    });
+    
+    return lessons;
+  } catch (error) {
+    console.error('Error loading lessons:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('get-lesson-by-id', async (_, lessonId) => {
+  try {
+    const lessonsPath = isDev 
+      ? path.join(__dirname, 'src/lessons') 
+      : path.join(process.resourcesPath, 'lessons');
+    
+    const filePath = path.join(lessonsPath, `${lessonId}.json`);
+    
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(data);
+    } else {
+      return { error: 'Lesson not found' };
+    }
+  } catch (error) {
+    console.error(`Error loading lesson ${lessonId}:`, error);
+    return { error: 'Failed to load lesson' };
+  }
+});
+
+// Translation and speech API handlers would connect to external services
+// These are placeholder implementations
+ipcMain.handle('translate-text', async (_, text, targetLanguage, sourceLanguage) => {
+  // In a real app, this would call a translation API
+  console.log(`Translating from ${sourceLanguage} to ${targetLanguage}: ${text}`);
+  return { 
+    translation: `[Translation of "${text}" to ${targetLanguage}]`,
+    sourceLanguage: sourceLanguage || 'auto-detected'
   };
 });
 
-// Mock speech-to-text service
-ipcMain.handle('speech-to-text', (event, audioData, language) => {
-  // In a real app, this would send audio to a speech recognition service
+ipcMain.handle('speech-to-text', async (_, audioData, language) => {
+  // In a real app, this would send audio to a speech recognition API
+  console.log(`Converting speech to text in ${language}`);
   return {
-    success: true,
-    text: "This is a mock transcription",
-    language
+    text: '[Transcribed text would appear here]'
   };
 });
 
-// Mock text-to-speech service
-ipcMain.handle('text-to-speech', (event, text, language) => {
-  // In a real app, this would convert text to audio using a TTS service
+ipcMain.handle('text-to-speech', async (_, text, language) => {
+  // In a real app, this would generate audio from text
+  console.log(`Converting text to speech in ${language}: ${text}`);
   return {
-    success: true,
-    audioUrl: 'data:audio/mp3;base64,mockAudioDataBase64',
-    language
+    audioUrl: '[Audio data would be returned here]'
   };
 });
 
-// Mock recording functions
+// Recording functionality
+let recordingInterval;
+
 ipcMain.on('start-recording', () => {
-  // In a real app, this would start audio recording
-  console.log('Recording started');
+  console.log('Started recording audio');
+  // In a real app, this would initialize audio recording
 });
 
-ipcMain.handle('stop-recording', () => {
+ipcMain.handle('stop-recording', async () => {
+  console.log('Stopped recording audio');
   // In a real app, this would stop recording and return the audio data
-  return Buffer.from('mock audio data');
+  return {
+    audioData: '[Recorded audio data would be here]'
+  };
 });
-
-// Helper function to generate mock lesson content
-function generateLessonContent(lessonId, lessonTitle) {
-  const elements = [];
-  
-  // Intro element
-  elements.push({
-    id: `${lessonId}_intro`,
-    type: 'intro',
-    title: `Introduction to ${lessonTitle}`,
-    content: `Welcome to this lesson about ${lessonTitle}. In this lesson, you will learn essential vocabulary and phrases.`
-  });
-  
-  // Vocabulary elements
-  elements.push({
-    id: `${lessonId}_vocab1`,
-    type: 'vocab',
-    word: 'Hola',
-    translation: 'Hello',
-    example: '¡Hola! ¿Cómo estás?'
-  });
-  
-  // Grammar element
-  elements.push({
-    id: `${lessonId}_grammar1`,
-    type: 'grammar',
-    concept: 'Present Tense',
-    explanation: 'The present tense is used to describe actions happening now.',
-    examples: ['Yo hablo español', 'Tú hablas español', 'Él habla español']
-  });
-  
-  // Exercise elements
-  elements.push({
-    id: `${lessonId}_ex1`,
-    type: 'exercise_translate',
-    sentence: '¿Cómo te llamas?',
-    correctAnswer: 'What is your name?'
-  });
-  
-  elements.push({
-    id: `${lessonId}_ex2`,
-    type: 'exercise_multichoice',
-    question: 'How do you say "Thank you" in Spanish?',
-    options: ['Gracias', 'Por favor', 'De nada', 'Buenos días'],
-    correctAnswer: 'Gracias'
-  });
-  
-  return elements;
-}
 
 // Example IPC handler (can be expanded)
 ipcMain.handle('example-ipc', async (event, arg) => {

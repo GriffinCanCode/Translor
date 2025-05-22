@@ -60,5 +60,8 @@ out/
 .electron-builder/
 release/
 *.asar
+dist/
+*.blockmap
+*.yml
 
 # Additional patterns from scan
