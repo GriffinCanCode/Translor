@@ -6,11 +6,11 @@ module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
 
   return {
-    entry: './translor/src/index.js', // Entry point of your React app
+    entry: './src/index.js', // Entry point of your React app
     output: {
       path: path.resolve(__dirname, 'dist'), // Output directory for bundled files
       filename: 'bundle.js',
-      publicPath: './'
+      publicPath: '/'
     },
     target: 'web', // Target environment (web for renderer process)
     devtool: isDevelopment ? 'eval-source-map' : 'source-map',
@@ -50,7 +50,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './translor/src/index.html', // Path to your source HTML file
+        template: './src/index.html', // Path to your source HTML file
         filename: 'index.html',
       }),
       !isDevelopment && new MiniCssExtractPlugin({
@@ -60,14 +60,14 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.js', '.jsx'],
       alias: {
-        '@components': path.resolve(__dirname, 'translor/src/components'),
-        '@contexts': path.resolve(__dirname, 'translor/src/contexts'),
-        '@services': path.resolve(__dirname, 'translor/src/services'),
-        '@store': path.resolve(__dirname, 'translor/src/store'),
-        '@styles': path.resolve(__dirname, 'translor/src/styles'),
-        '@utils': path.resolve(__dirname, 'translor/src/utils'),
-        '@lessons': path.resolve(__dirname, 'translor/src/lessons'),
-        '@assets': path.resolve(__dirname, 'translor/assets')
+        '@components': path.resolve(__dirname, 'src/components'),
+        '@contexts': path.resolve(__dirname, 'src/contexts'),
+        '@services': path.resolve(__dirname, 'src/services'),
+        '@store': path.resolve(__dirname, 'src/store'),
+        '@styles': path.resolve(__dirname, 'src/styles'),
+        '@utils': path.resolve(__dirname, 'src/utils'),
+        '@lessons': path.resolve(__dirname, 'src/lessons'),
+        '@assets': path.resolve(__dirname, 'assets')
       }
     },
   };
