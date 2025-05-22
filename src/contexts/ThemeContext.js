@@ -26,7 +26,7 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const loadSavedTheme = async () => {
       try {
-        const settings = await window.api.getUserSettings();
+        const settings = await window.electronAPI.getUserSettings();
         if (settings?.theme) {
           setTheme(settings.theme);
         }
@@ -59,7 +59,7 @@ export const ThemeProvider = ({ children }) => {
     mediaQuery.addEventListener('change', handleChange);
 
     // Listen for theme changes from the main process
-    const cleanup = window.api.onSystemThemeChange((newTheme) => {
+    const cleanup = window.electronAPI.onSystemThemeChange((newTheme) => {
       setSystemTheme(newTheme);
     });
     

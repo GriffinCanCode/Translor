@@ -61,7 +61,7 @@ export const validateCssFiles = () => {
       
       const detectionPatterns = {
         'globals.css': ['.body', 'html', 'body'],
-        'theme.css': ['--primary', '--secondary'],
+        'theme.css': ['--color-primary', '--color-secondary', 'theme-light', 'theme-dark'],
         'common.css': ['.btn', '.card'],
         'layout.css': ['.app-header', '.app-sidebar', '.app-main'],
         'dashboard.css': ['.dashboard-card', '.dashboard-stat'],

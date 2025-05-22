@@ -6,6 +6,8 @@ import useLogger from './utils/useLogger';
 import { UserProvider } from './contexts/UserContext';
 import { LessonProvider } from './contexts/LessonContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { TranslationProvider } from './contexts/TranslationContext';
+import { ChatGPTProvider } from './contexts/ChatGPTContext';
 
 // Import pages/components
 import Layout from './components/Layout/Layout';
@@ -80,46 +82,50 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <UserProvider>
-          <LessonProvider>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={
-                  <ErrorBoundary showResetButton>
-                    <Dashboard />
-                  </ErrorBoundary>
-                } />
-                <Route path="conversation" element={
-                  <ErrorBoundary showResetButton>
-                    <Conversation />
-                  </ErrorBoundary>
-                } />
-                <Route path="lessons" element={
-                  <ErrorBoundary showResetButton>
-                    <Lessons />
-                  </ErrorBoundary>
-                } />
-                <Route path="lessons/:lessonId" element={
-                  <ErrorBoundary showResetButton>
-                    <LessonDetail />
-                  </ErrorBoundary>
-                } />
-                <Route path="profile" element={
-                  <ErrorBoundary showResetButton>
-                    <Profile />
-                  </ErrorBoundary>
-                } />
-                <Route path="settings" element={
-                  <ErrorBoundary showResetButton>
-                    <Settings />
-                  </ErrorBoundary>
-                } />
-                <Route path="404" element={<NotFound />} />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Route>
-            </Routes>
-          </LessonProvider>
-        </UserProvider>
+        <TranslationProvider>
+          <ChatGPTProvider>
+            <UserProvider>
+              <LessonProvider>
+                <Routes>
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={
+                      <ErrorBoundary showResetButton>
+                        <Dashboard />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="conversation" element={
+                      <ErrorBoundary showResetButton>
+                        <Conversation />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="lessons" element={
+                      <ErrorBoundary showResetButton>
+                        <Lessons />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="lessons/:lessonId" element={
+                      <ErrorBoundary showResetButton>
+                        <LessonDetail />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="profile" element={
+                      <ErrorBoundary showResetButton>
+                        <Profile />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="settings" element={
+                      <ErrorBoundary showResetButton>
+                        <Settings />
+                      </ErrorBoundary>
+                    } />
+                    <Route path="404" element={<NotFound />} />
+                    <Route path="*" element={<Navigate to="/404" replace />} />
+                  </Route>
+                </Routes>
+              </LessonProvider>
+            </UserProvider>
+          </ChatGPTProvider>
+        </TranslationProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
