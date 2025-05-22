@@ -1,5 +1,7 @@
 const path = require('path');
 const fs = require('fs');
+// Load environment variables from .env file
+require('dotenv').config();
 
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const Store = require('electron-store');
@@ -364,6 +366,8 @@ ipcMain.handle('example-ipc', async (event, arg) => {
 const express = require('express');
 const backendApp = express();
 const PORT = 3001; // Different port from Electron and React dev server
+const http = require('http');
+const server = http.createServer(backendApp);
 
 backendApp.use(express.json());
 
@@ -371,6 +375,25 @@ backendApp.get('/api/test', (req, res) => {
   res.json({ message: 'Hello from Translor backend!' });
 });
 
-backendApp.listen(PORT, () => {
-  console.log(`Translor backend server running on http://localhost:${PORT}`);
-}); 
+// Try to start the server on the specified port
+// If it fails, try with a different port
+function startServer(port) {
+  try {
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.warn(`Port ${port} is already in use, trying port ${port + 1}`);
+        startServer(port + 1);
+      } else {
+        console.error('Error starting the server:', error);
+      }
+    });
+    
+    server.listen(port, () => {
+      console.log(`Translor backend server running on http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start backend server:', error);
+  }
+}
+
+startServer(PORT); 

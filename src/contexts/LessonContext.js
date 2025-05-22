@@ -18,7 +18,7 @@ export const LessonProvider = ({ children }) => {
     const loadLessonData = async () => {
       try {
         // In a real app, this would call the Electron API through preload
-        const lessonsData = await window.api.getLessons();
+        const lessonsData = await window.electronAPI.getLessons();
         
         if (lessonsData) {
           setLessons(lessonsData.lessons || []);
@@ -26,7 +26,7 @@ export const LessonProvider = ({ children }) => {
         }
         
         // Get user progress data
-        const progressData = await window.api.getUserProgress();
+        const progressData = await window.electronAPI.getUserProgress();
         
         if (progressData && progressData.lessonProgress) {
           setUserProgress(progressData.lessonProgress);
@@ -47,7 +47,7 @@ export const LessonProvider = ({ children }) => {
     
     try {
       setLoading(true);
-      const lessonData = await window.api.getLessonById(lessonId);
+      const lessonData = await window.electronAPI.getLessonById(lessonId);
       
       if (lessonData) {
         setCurrentLesson(lessonData);
@@ -73,7 +73,7 @@ export const LessonProvider = ({ children }) => {
     setUserProgress(updatedProgress);
     
     try {
-      await window.api.saveProgress({
+      await window.electronAPI.saveProgress({
         lessonProgress: updatedProgress
       });
     } catch (error) {

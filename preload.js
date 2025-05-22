@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld(
-  'api', {
+  'electronAPI', {
     // User settings and progress
     getUserSettings: () => ipcRenderer.invoke('get-user-settings'),
     getUserProgress: () => ipcRenderer.invoke('get-user-progress'),
@@ -31,5 +31,15 @@ contextBridge.exposeInMainWorld(
     stopRecording: () => ipcRenderer.invoke('stop-recording')
   }
 );
+
+// Expose environment variables to the renderer process
+contextBridge.exposeInMainWorld('env', {
+  REACT_APP_OPENAI_API_KEY: process.env.REACT_APP_OPENAI_API_KEY,
+  REACT_APP_TRANSLATION_API_KEY: process.env.REACT_APP_TRANSLATION_API_KEY,
+  REACT_APP_TTS_PROVIDER: process.env.REACT_APP_TTS_PROVIDER,
+  REACT_APP_STT_PROVIDER: process.env.REACT_APP_STT_PROVIDER,
+  REACT_APP_ELEVENLABS_API_KEY: process.env.REACT_APP_ELEVENLABS_API_KEY,
+  NODE_ENV: process.env.NODE_ENV
+});
 
 console.log('Preload script loaded.'); 

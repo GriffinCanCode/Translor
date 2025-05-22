@@ -1,137 +1,153 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Create context
+// User context to manage user data across the app
 const UserContext = createContext();
 
-// Custom hook for using the context
+// Custom hook to use the user context
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [xp, setXp] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [streak, setStreak] = useState(0);
-  const [achievements, setAchievements] = useState([]);
-  const [targetLanguage, setTargetLanguage] = useState('es'); // Default to Spanish
-  const [nativeLanguage, setNativeLanguage] = useState('en'); // Default to English
+  // User state with defaults
+  const [user, setUser] = useState({
+    userId: localStorage.getItem('userId') || `user-${Date.now()}`,
+    name: localStorage.getItem('userName') || '',
+    nativeLanguage: localStorage.getItem('nativeLanguage') || 'en',
+    targetLanguage: localStorage.getItem('targetLanguage') || 'es',
+    proficiencyLevel: localStorage.getItem('proficiencyLevel') || 'beginner',
+    xp: parseInt(localStorage.getItem('userXp') || '0', 10),
+    streak: parseInt(localStorage.getItem('userStreak') || '0', 10),
+    lastActiveDate: localStorage.getItem('lastActiveDate') || null,
+    completedLessons: JSON.parse(localStorage.getItem('completedLessons') || '[]'),
+    settings: JSON.parse(localStorage.getItem('userSettings') || '{"voiceSpeed": 1, "notifications": true}')
+  });
 
+  // Update localStorage when user state changes
   useEffect(() => {
-    // Load user data from electron API or local storage
-    const loadUserData = async () => {
-      try {
-        // In a real app, this would call the Electron API through preload
-        const userSettings = await window.api.getUserSettings();
+    localStorage.setItem('userId', user.userId);
+    localStorage.setItem('userName', user.name);
+    localStorage.setItem('nativeLanguage', user.nativeLanguage);
+    localStorage.setItem('targetLanguage', user.targetLanguage);
+    localStorage.setItem('proficiencyLevel', user.proficiencyLevel);
+    localStorage.setItem('userXp', user.xp.toString());
+    localStorage.setItem('userStreak', user.streak.toString());
+    localStorage.setItem('lastActiveDate', user.lastActiveDate);
+    localStorage.setItem('completedLessons', JSON.stringify(user.completedLessons));
+    localStorage.setItem('userSettings', JSON.stringify(user.settings));
+  }, [user]);
+
+  // Check and update streak on login
+  useEffect(() => {
+    const checkStreak = () => {
+      const today = new Date().toDateString();
+      if (user.lastActiveDate) {
+        const lastActive = new Date(user.lastActiveDate);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
         
-        if (userSettings) {
-          setUser({
-            name: userSettings.name || 'User',
-            email: userSettings.email || '',
-            avatarUrl: userSettings.avatarUrl || '',
-          });
-          setTargetLanguage(userSettings.targetLanguage || 'es');
-          setNativeLanguage(userSettings.nativeLanguage || 'en');
+        if (lastActive.toDateString() === yesterday.toDateString()) {
+          // User was active yesterday, increment streak
+          setUser(prev => ({
+            ...prev,
+            streak: prev.streak + 1,
+            lastActiveDate: today
+          }));
+        } else if (lastActive.toDateString() !== today) {
+          // User wasn't active yesterday or today, reset streak
+          setUser(prev => ({
+            ...prev,
+            streak: 1,
+            lastActiveDate: today
+          }));
         }
-        
-        // Get user progress data
-        const progressData = await window.api.getUserProgress();
-        
-        if (progressData) {
-          setXp(progressData.xp || 0);
-          setLevel(progressData.level || 1);
-          setStreak(progressData.streak || 0);
-          setAchievements(progressData.achievements || []);
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        // First time user
+        setUser(prev => ({
+          ...prev,
+          streak: 1,
+          lastActiveDate: today
+        }));
       }
     };
-
-    loadUserData();
+    
+    checkStreak();
   }, []);
 
-  // Function to update user XP
-  const addXp = async (amount) => {
-    const newXp = xp + amount;
-    setXp(newXp);
-    
-    // Calculate new level based on XP thresholds
-    const newLevel = calculateLevel(newXp);
-    if (newLevel > level) {
-      setLevel(newLevel);
-      // Could trigger a level-up animation/notification here
-    }
-    
-    try {
-      await window.api.updateXP(amount);
-    } catch (error) {
-      console.error('Error saving XP update:', error);
-    }
+  // Update user name
+  const updateName = (name) => {
+    setUser(prev => ({ ...prev, name }));
   };
 
-  // Calculate level based on XP (simplified example)
-  const calculateLevel = (experiencePoints) => {
-    return Math.floor(Math.sqrt(experiencePoints / 100)) + 1;
+  // Update language preferences
+  const updateLanguages = (nativeLanguage, targetLanguage) => {
+    setUser(prev => ({ ...prev, nativeLanguage, targetLanguage }));
   };
 
-  // Function to update user streak
-  const updateStreak = async () => {
-    const newStreak = streak + 1;
-    setStreak(newStreak);
-    
-    try {
-      await window.api.saveProgress({ streak: newStreak });
-    } catch (error) {
-      console.error('Error updating streak:', error);
+  // Update proficiency level
+  const updateProficiencyLevel = (proficiencyLevel) => {
+    setUser(prev => ({ ...prev, proficiencyLevel }));
+  };
+
+  // Add XP points
+  const addXp = (points) => {
+    setUser(prev => ({ ...prev, xp: prev.xp + points }));
+  };
+
+  // Mark a lesson as completed
+  const completeLesson = (lessonId) => {
+    if (!user.completedLessons.includes(lessonId)) {
+      setUser(prev => ({
+        ...prev,
+        completedLessons: [...prev.completedLessons, lessonId],
+        xp: prev.xp + 20 // Award XP for completing a lesson
+      }));
     }
   };
 
-  // Function to unlock a new achievement
-  const unlockAchievement = async (achievementId) => {
-    if (achievements.includes(achievementId)) return; // Already unlocked
-    
-    const newAchievements = [...achievements, achievementId];
-    setAchievements(newAchievements);
-    
-    try {
-      await window.api.unlockAchievement(achievementId);
-    } catch (error) {
-      console.error('Error unlocking achievement:', error);
-    }
+  // Update user settings
+  const updateSettings = (newSettings) => {
+    setUser(prev => ({
+      ...prev,
+      settings: { ...prev.settings, ...newSettings }
+    }));
   };
 
-  // Function to update language preferences
-  const updateLanguagePreferences = async (newTargetLang, newNativeLang) => {
-    setTargetLanguage(newTargetLang);
-    setNativeLanguage(newNativeLang);
-    
-    try {
-      await window.api.saveUserSettings({
-        targetLanguage: newTargetLang,
-        nativeLanguage: newNativeLang
-      });
-    } catch (error) {
-      console.error('Error saving language preferences:', error);
-    }
+  // Reset user progress (for testing or user request)
+  const resetProgress = () => {
+    const today = new Date().toDateString();
+    setUser(prev => ({
+      ...prev,
+      xp: 0,
+      streak: 1,
+      lastActiveDate: today,
+      completedLessons: []
+    }));
   };
-
+  
+  // Value to be provided to consumers
   const value = {
-    user,
-    setUser,
-    loading,
-    xp,
-    level,
-    streak,
-    achievements,
-    targetLanguage,
-    nativeLanguage,
+    userId: user.userId,
+    name: user.name,
+    nativeLanguage: user.nativeLanguage,
+    targetLanguage: user.targetLanguage,
+    proficiencyLevel: user.proficiencyLevel,
+    xp: user.xp,
+    streak: user.streak,
+    completedLessons: user.completedLessons,
+    settings: user.settings,
+    updateName,
+    updateLanguages,
+    updateProficiencyLevel,
     addXp,
-    updateStreak,
-    unlockAchievement,
-    updateLanguagePreferences
+    completeLesson,
+    updateSettings,
+    resetProgress
   };
 
-  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
-}; 
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
+export default UserProvider; 
