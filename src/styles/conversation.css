@@ -1,38 +1,39 @@
 /* Conversation component styles */
-@layer components {
-  .chat-container {
-    @apply flex flex-col h-full overflow-hidden;
-  }
-  
-  .chat-messages {
-    @apply flex-1 overflow-y-auto p-4 space-y-4;
-  }
-  
-  .message {
-    @apply max-w-[80%] rounded-lg p-3;
-  }
-  
-  .message-sent {
-    @apply bg-primary-500 text-white ml-auto rounded-br-none;
-  }
-  
-  .message-received {
-    @apply bg-gray-200 text-gray-800 mr-auto rounded-bl-none;
-  }
-  
-  .message-time {
-    @apply text-xs mt-1 opacity-70;
-  }
-  
-  .chat-input-container {
-    @apply border-t border-gray-200 p-4 bg-white;
-  }
-  
-  .chat-input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
-  }
-  
-  .chat-send-button {
-    @apply absolute right-6 top-1/2 -translate-y-1/2 text-primary-600 hover:text-primary-800;
-  }
+/* Import the main tailwind file for proper compilation */
+@import './index.css';
+
+.chat-container {
+  @apply flex flex-col h-full overflow-hidden;
+}
+
+.chat-messages {
+  @apply flex-1 overflow-y-auto p-4 space-y-4;
+}
+
+.message {
+  @apply max-w-[80%] rounded-lg p-3;
+}
+
+.message-sent {
+  @apply bg-primary-500 text-white ml-auto rounded-br-none;
+}
+
+.message-received {
+  @apply bg-gray-200 text-gray-800 mr-auto rounded-bl-none;
+}
+
+.message-time {
+  @apply text-xs mt-1 opacity-70;
+}
+
+.chat-input-container {
+  @apply border-t border-gray-200 p-4 bg-white;
+}
+
+.chat-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+}
+
+.chat-send-button {
+  @apply absolute right-6 top-1/2 -translate-y-1/2 text-primary-600 hover:text-primary-800;
 } 

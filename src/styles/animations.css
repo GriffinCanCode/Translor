@@ -1,39 +1,37 @@
 /* Animation styles */
-@layer utilities {
-  /* Fade animations */
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-in forwards;
-  }
-  
-  .animate-fade-out {
-    animation: fadeOut 0.5s ease-out forwards;
-  }
-  
-  /* Slide animations */
-  .animate-slide-in-right {
-    animation: slideInRight 0.3s ease-out forwards;
-  }
-  
-  .animate-slide-out-right {
-    animation: slideOutRight 0.3s ease-in forwards;
-  }
-  
-  .animate-slide-in-left {
-    animation: slideInLeft 0.3s ease-out forwards;
-  }
-  
-  .animate-slide-out-left {
-    animation: slideOutLeft 0.3s ease-in forwards;
-  }
-  
-  /* Bounce animations */
-  .animate-bounce-slow {
-    animation: bounce 3s infinite;
-  }
-  
-  .animate-pulse-subtle {
-    animation: pulsate 2s ease-in-out infinite;
-  }
+/* Custom animation utilities */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.5s ease-out forwards;
+}
+
+/* Slide animations */
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.3s ease-in forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.animate-slide-out-left {
+  animation: slideOutLeft 0.3s ease-in forwards;
+}
+
+/* Bounce animations */
+.animate-bounce-slow {
+  animation: bounce 3s infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulsate 2s ease-in-out infinite;
 }
 
 /* Keyframes */

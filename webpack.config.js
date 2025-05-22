@@ -9,11 +9,13 @@ module.exports = (env, argv) => {
   const isProduction = !isDevelopment;
 
   return {
-    entry: './src/index.js', // Entry point of your React app
+    entry: {
+      main: './src/index.js',
+    },
     output: {
       path: path.resolve(process.cwd(), 'dist'), // Output directory for bundled files
       filename: isProduction ? '[name].[contenthash].js' : '[name].js',
-      publicPath: './', // Always use relative paths for packaged electron app
+      publicPath: isProduction ? './' : '/',
       clean: true // Clean the output directory before emit
     },
     target: 'web', // Target environment (web for renderer process)
@@ -54,8 +56,8 @@ module.exports = (env, argv) => {
             name: 'vendors',
             chunks: 'all',
           },
-          styles: {
-            name: 'styles',
+          cssStyles: {
+            name: 'css-styles',
             test: /\.css$/,
             chunks: 'all',
             enforce: true,
@@ -80,15 +82,9 @@ module.exports = (env, argv) => {
               loader: 'css-loader',
               options: {
                 importLoaders: 1,
-                sourceMap: isDevelopment,
               }
             },
-            {
-              loader: 'postcss-loader',
-              options: {
-                sourceMap: isDevelopment,
-              }
-            }
+            'postcss-loader'
           ]
         },
         {
@@ -120,10 +116,8 @@ module.exports = (env, argv) => {
       }),
       // Always include MiniCssExtractPlugin, but configure it based on environment
       new MiniCssExtractPlugin({
-        filename: isProduction ? '[name].[contenthash].css' : '[name].css',
-        chunkFilename: isProduction ? '[id].[contenthash].css' : '[id].css',
-        // Only emit CSS files in production
-        ignoreOrder: true,
+        filename: isProduction ? 'styles/[name].[contenthash].css' : 'styles/[name].css',
+        chunkFilename: isProduction ? 'styles/[id].[contenthash].css' : 'styles/[id].css',
       }),
     ],
     resolve: {

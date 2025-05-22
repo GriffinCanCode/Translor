@@ -21,7 +21,7 @@ export const UserProvider = ({ children }) => {
     const loadUserData = async () => {
       try {
         // In a real app, this would call the Electron API through preload
-        const userSettings = await window.electronAPI.getUserSettings();
+        const userSettings = await window.api.getUserSettings();
         
         if (userSettings) {
           setUser({
@@ -34,7 +34,7 @@ export const UserProvider = ({ children }) => {
         }
         
         // Get user progress data
-        const progressData = await window.electronAPI.getUserProgress();
+        const progressData = await window.api.getUserProgress();
         
         if (progressData) {
           setXp(progressData.xp || 0);
@@ -65,7 +65,7 @@ export const UserProvider = ({ children }) => {
     }
     
     try {
-      await window.electronAPI.updateXP(amount);
+      await window.api.updateXP(amount);
     } catch (error) {
       console.error('Error saving XP update:', error);
     }
@@ -82,7 +82,7 @@ export const UserProvider = ({ children }) => {
     setStreak(newStreak);
     
     try {
-      await window.electronAPI.saveProgress({ streak: newStreak });
+      await window.api.saveProgress({ streak: newStreak });
     } catch (error) {
       console.error('Error updating streak:', error);
     }
@@ -96,7 +96,7 @@ export const UserProvider = ({ children }) => {
     setAchievements(newAchievements);
     
     try {
-      await window.electronAPI.unlockAchievement(achievementId);
+      await window.api.unlockAchievement(achievementId);
     } catch (error) {
       console.error('Error unlocking achievement:', error);
     }
@@ -108,7 +108,7 @@ export const UserProvider = ({ children }) => {
     setNativeLanguage(newNativeLang);
     
     try {
-      await window.electronAPI.saveUserSettings({
+      await window.api.saveUserSettings({
         targetLanguage: newTargetLang,
         nativeLanguage: newNativeLang
       });

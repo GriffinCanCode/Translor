@@ -1,38 +1,71 @@
 /* Dashboard component styles */
-@layer components {
-  .dashboard-card {
-    @apply bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow;
-  }
-  
-  .dashboard-stat {
-    @apply flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow;
-  }
-  
-  .dashboard-stat-value {
-    @apply text-3xl font-bold text-primary-600;
-  }
-  
-  .dashboard-stat-label {
-    @apply text-sm text-gray-500 mt-1;
-  }
-  
-  .dashboard-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
-  }
-  
-  .dashboard-activity {
-    @apply bg-white rounded-lg shadow-md overflow-hidden;
-  }
-  
-  .dashboard-activity-header {
-    @apply px-4 py-3 bg-gray-50 border-b border-gray-200 font-medium;
-  }
-  
-  .dashboard-activity-list {
-    @apply divide-y divide-gray-200;
-  }
-  
-  .dashboard-activity-item {
-    @apply px-4 py-3 hover:bg-gray-50;
-  }
+/* Import the main tailwind file for proper compilation */
+@import './index.css';
+
+.dashboard-card {
+  @apply bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow;
+}
+
+.dashboard-card-header {
+  @apply flex justify-between items-center mb-4;
+}
+
+.dashboard-card-title {
+  @apply text-lg font-semibold text-gray-800;
+}
+
+.dashboard-card-content {
+  @apply space-y-3;
+}
+
+.stat-item {
+  @apply flex justify-between items-center py-2 border-b border-gray-100 last:border-0;
+}
+
+.stat-label {
+  @apply text-gray-500 text-sm;
+}
+
+.stat-value {
+  @apply font-medium text-gray-900;
+}
+
+.progress-bar {
+  @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-primary-500 rounded-full;
+}
+
+.dashboard-stat {
+  @apply flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow;
+}
+
+.dashboard-stat-value {
+  @apply text-3xl font-bold text-primary-600;
+}
+
+.dashboard-stat-label {
+  @apply text-sm text-gray-500 mt-1;
+}
+
+.dashboard-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
+}
+
+.dashboard-activity {
+  @apply bg-white rounded-lg shadow-md overflow-hidden;
+}
+
+.dashboard-activity-header {
+  @apply px-4 py-3 bg-gray-50 border-b border-gray-200 font-medium;
+}
+
+.dashboard-activity-list {
+  @apply divide-y divide-gray-200;
+}
+
+.dashboard-activity-item {
+  @apply px-4 py-3 hover:bg-gray-50;
 } 

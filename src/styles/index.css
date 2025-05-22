@@ -1,23 +1,8 @@
 /* Main stylesheet entry point for Translor app */
 
-/* Tailwind base layers */
+/* Tailwind base layers - these MUST be first */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Import global styles */
-@import './globals.css';
-@import './theme.css';
-
-/* Import module-specific styles */
-@import './common.css';
-@import './layout.css';
-@import './dashboard.css';
-@import './conversation.css';
-@import './lessons.css';
-@import './profile.css';
-@import './settings.css';
-
-/* Import utilities */
-@import './animations.css';
-@import './responsive.css';
+/* Import all remaining CSS directly in the HTML or use webpack entry points instead */

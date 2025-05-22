@@ -1,42 +1,51 @@
 /* Lessons component styles */
-@layer components {
-  .lesson-card {
-    @apply bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:transform hover:scale-[1.02];
-  }
-  
-  .lesson-image {
-    @apply w-full h-48 object-cover;
-  }
-  
-  .lesson-content {
-    @apply p-5;
-  }
-  
-  .lesson-title {
-    @apply text-xl font-bold text-gray-800 mb-2;
-  }
-  
-  .lesson-description {
-    @apply text-gray-600 mb-4;
-  }
-  
-  .lesson-meta {
-    @apply flex justify-between items-center text-sm text-gray-500;
-  }
-  
-  .lesson-progress {
-    @apply w-full bg-gray-200 rounded-full h-2 mt-3;
-  }
-  
-  .lesson-progress-bar {
-    @apply bg-primary-500 h-2 rounded-full;
-  }
-  
-  .lesson-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
-  }
-  
-  .lesson-category-badge {
-    @apply inline-block px-2 py-1 text-xs font-medium bg-secondary-100 text-secondary-800 rounded-full;
-  }
+/* Import the main tailwind file for proper compilation */
+@import './index.css';
+
+.lesson-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:transform hover:scale-[1.02];
+}
+
+.lesson-header {
+  @apply p-4 border-b border-gray-100;
+}
+
+.lesson-title {
+  @apply text-xl font-semibold text-gray-900 mb-1;
+}
+
+.lesson-meta {
+  @apply flex items-center text-sm text-gray-500;
+}
+
+.lesson-content {
+  @apply p-4;
+}
+
+.lesson-description {
+  @apply text-gray-600 mb-4;
+}
+
+.lesson-footer {
+  @apply flex justify-between items-center px-4 py-3 bg-gray-50;
+}
+
+.lesson-grid {
+  @apply grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.lesson-progress {
+  @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+}
+
+.lesson-progress-bar {
+  @apply h-full bg-primary-500 rounded-full;
+}
+
+.lesson-image {
+  @apply w-full h-48 object-cover;
+}
+
+.lesson-category-badge {
+  @apply inline-block px-2 py-1 text-xs font-medium bg-secondary-100 text-secondary-800 rounded-full;
 } 

@@ -1,63 +1,66 @@
 /* Responsive utilities */
-@layer utilities {
-  /* Custom screen reader utilities */
-  .sr-only {
-    @apply absolute w-px h-px p-0 -m-px overflow-hidden border-0;
-    clip: rect(0, 0, 0, 0);
-  }
-  
-  /* Responsive hide/show utilities */
-  .hidden-xs {
-    @apply hidden sm:block;
-  }
-  
-  .hidden-sm {
-    @apply hidden md:block;
-  }
-  
-  .hidden-md {
-    @apply hidden lg:block;
-  }
-  
-  .hidden-lg {
-    @apply hidden xl:block;
-  }
-  
-  .hidden-xl {
-    @apply hidden 2xl:block;
-  }
-  
-  .visible-xs {
-    @apply block sm:hidden;
-  }
-  
-  .visible-sm {
-    @apply block md:hidden;
-  }
-  
-  .visible-md {
-    @apply block lg:hidden;
-  }
-  
-  .visible-lg {
-    @apply block xl:hidden;
-  }
-  
-  .visible-xl {
-    @apply block 2xl:hidden;
-  }
-  
-  /* Print utilities */
+/* Custom screen reader utilities */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Responsive hide/show utilities */
+.hidden-xs {
+  @apply hidden sm:block;
+}
+
+.hidden-sm {
+  @apply hidden md:block;
+}
+
+.hidden-md {
+  @apply hidden lg:block;
+}
+
+.hidden-lg {
+  @apply hidden xl:block;
+}
+
+.hidden-xl {
+  @apply hidden 2xl:block;
+}
+
+.visible-xs {
+  @apply block sm:hidden;
+}
+
+.visible-sm {
+  @apply block md:hidden;
+}
+
+.visible-md {
+  @apply block lg:hidden;
+}
+
+.visible-lg {
+  @apply block xl:hidden;
+}
+
+.visible-xl {
+  @apply block 2xl:hidden;
+}
+
+/* Print utilities */
+.print-only {
+  display: none;
+}
+@media print {
   .print-only {
-    @apply hidden;
-    @media print {
-      @apply block;
-    }
+    display: block;
   }
-  
+}
+
+.no-print {
+  display: block;
+}
+@media print {
   .no-print {
-    @media print {
-      @apply hidden;
-    }
+    display: none;
   }
 } 

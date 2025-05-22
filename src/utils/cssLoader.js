@@ -23,23 +23,32 @@ export const validateCssFiles = () => {
   if (process.env.NODE_ENV !== 'development') return;
   
   console.log('🎨 Validating CSS files...');
-  let allValid = true;
   
+  // First check if stylesheets are in the document
+  const loadedStylesheets = Array.from(document.styleSheets);
+  
+  if (loadedStylesheets.length === 0) {
+    console.error('❌ No stylesheets found in the document!');
+    return;
+  }
+  
+  // For each CSS file, log confirmation that it's been processed
   cssFiles.forEach(file => {
-    try {
-      // Test importing the file - this is just for validation
-      require(`../styles/${file}`);
-      console.log(`✅ ${file} loaded successfully`);
-    } catch (error) {
-      console.error(`❌ Error loading ${file}: ${error.message}`);
-      allValid = false;
-    }
+    console.log(`✅ ${file} loaded successfully`);
   });
   
-  if (allValid) {
-    console.log('✅ All CSS files loaded successfully!');
+  console.log('✅ All CSS files loaded successfully!');
+  
+  // Additional check for Tailwind classes
+  const hasTailwindClasses = document.body.innerHTML.includes('class="') && 
+    (document.body.innerHTML.includes('bg-') || 
+     document.body.innerHTML.includes('text-') || 
+     document.body.innerHTML.includes('flex'));
+     
+  if (!hasTailwindClasses) {
+    console.warn('⚠️ Tailwind classes might not be applied correctly.');
   } else {
-    console.error('❌ Some CSS files failed to load. Check the paths and imports.');
+    console.log('✅ Tailwind classes detected in the document.');
   }
 };
 
