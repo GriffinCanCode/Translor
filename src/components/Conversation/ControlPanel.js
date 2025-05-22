@@ -1,19 +1,44 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import useLogger from '../../utils/useLogger';
 
 const ControlPanel = ({
   inputText,
   setInputText,
   handleSubmit,
-  handleVoiceInput,
+  toggleRecording,
   isRecording,
   isProcessing
 }) => {
+  const logger = useLogger({ component: 'ControlPanel' });
+  
+  useEffect(() => {
+    logger.debug('ControlPanel state updated', {
+      isRecording,
+      isProcessing,
+      hasInput: !!inputText.trim()
+    });
+  }, [isRecording, isProcessing, inputText, logger]);
+  
+  const handleInputChange = (e) => {
+    setInputText(e.target.value);
+  };
+  
+  const handleFormSubmit = (e) => {
+    logger.debug('Submitting message', { messageLength: inputText.trim().length });
+    handleSubmit(e);
+  };
+  
+  const handleVoiceToggle = () => {
+    logger.debug('Toggling voice recording', { currentState: isRecording ? 'recording' : 'idle' });
+    toggleRecording();
+  };
+  
   return (
     <div className="p-4 border-t border-gray-200 bg-white">
-      <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+      <form onSubmit={handleFormSubmit} className="flex items-center space-x-2">
         <button
           type="button"
-          onClick={handleVoiceInput}
+          onClick={handleVoiceToggle}
           disabled={isProcessing}
           className={`
             p-2 rounded-full flex-shrink-0 transition-colors
@@ -39,7 +64,7 @@ const ControlPanel = ({
         <input
           type="text"
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={handleInputChange}
           disabled={isProcessing || isRecording}
           className="input flex-1"
           placeholder="Type your message..."

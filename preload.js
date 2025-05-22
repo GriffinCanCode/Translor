@@ -28,7 +28,10 @@ contextBridge.exposeInMainWorld(
     
     // Recording
     startRecording: () => ipcRenderer.send('start-recording'),
-    stopRecording: () => ipcRenderer.invoke('stop-recording')
+    stopRecording: () => ipcRenderer.invoke('stop-recording'),
+    
+    // Logging - single handler to simplify the process
+    log: (logData) => ipcRenderer.invoke('log', logData)
   }
 );
 

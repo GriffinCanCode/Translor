@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger } from '../utils/logger';
 
 /**
  * Service for interacting with OpenAI's GPT models
@@ -8,6 +9,10 @@ class ChatGPTService {
     this.apiKey = window.env?.REACT_APP_OPENAI_API_KEY || '';
     this.apiUrl = 'https://api.openai.com/v1/chat/completions';
     this.conversationHistory = new Map(); // Store conversation history by user
+    logger.info('ChatGPTService initialized', { 
+      hasApiKey: !!this.apiKey,
+      endpoint: this.apiUrl
+    });
   }
 
   /**
@@ -17,6 +22,7 @@ class ChatGPTService {
    */
   initializeConversation(userId) {
     if (!this.conversationHistory.has(userId)) {
+      logger.debug('Initializing new conversation history', { userId });
       this.conversationHistory.set(userId, []);
     }
     return this.conversationHistory.get(userId);
@@ -34,6 +40,7 @@ class ChatGPTService {
     
     // Keep history size manageable (last 10 messages)
     if (history.length > 10) {
+      logger.debug('Trimming conversation history', { userId, historyLength: history.length });
       this.conversationHistory.set(userId, history.slice(-10));
     }
   }
@@ -47,12 +54,20 @@ class ChatGPTService {
    * @returns {Promise<string>} - ChatGPT response
    */
   async getResponse(userId, targetLanguage, userMessage, userLevel = 'beginner') {
+    logger.info('Getting ChatGPT response', { 
+      userId, 
+      targetLanguage,
+      userLevel,
+      messageLength: userMessage.length
+    });
+    
     try {
       // Get conversation history
       const history = this.initializeConversation(userId);
 
       // Add system message for context if it's a new conversation
       if (history.length === 0) {
+        logger.debug('Adding system message for new conversation', { userId, targetLanguage });
         this.addMessage(userId, 'system', 
           `You are a helpful language tutor helping a ${userLevel} learn ${targetLanguage}. 
            Respond in ${targetLanguage} only. Keep responses conversational and appropriate for their level.
@@ -67,6 +82,12 @@ class ChatGPTService {
       const messages = [...this.conversationHistory.get(userId)];
 
       // Call OpenAI API
+      logger.debug('Calling OpenAI API', { 
+        userId,
+        model: 'gpt-4-turbo',
+        messagesCount: messages.length
+      });
+      
       const response = await axios.post(
         this.apiUrl,
         {
@@ -85,13 +106,26 @@ class ChatGPTService {
 
       // Extract response text
       const responseText = response.data.choices[0].message.content.trim();
+      logger.debug('Received ChatGPT response', { 
+        userId, 
+        responseLength: responseText.length,
+        promptTokens: response.data.usage?.prompt_tokens,
+        completionTokens: response.data.usage?.completion_tokens,
+        totalTokens: response.data.usage?.total_tokens
+      });
       
       // Add assistant response to history
       this.addMessage(userId, 'assistant', responseText);
       
       return responseText;
     } catch (error) {
-      console.error('Error calling ChatGPT API:', error);
+      logger.error('Error calling ChatGPT API', { 
+        userId,
+        error: error.message,
+        statusCode: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: error.response?.data
+      });
       throw new Error('Failed to get response from ChatGPT');
     }
   }
@@ -104,6 +138,12 @@ class ChatGPTService {
    * @returns {Promise<Object>} - Structured feedback
    */
   async generateFeedback(userId, userInput, targetLanguage) {
+    logger.info('Generating language feedback', { 
+      userId, 
+      targetLanguage,
+      inputLength: userInput.length 
+    });
+    
     try {
       const feedbackPrompt = `
         As a language tutor, analyze this learner's ${targetLanguage} message: "${userInput}"
@@ -116,6 +156,12 @@ class ChatGPTService {
         Format as valid JSON only, without explanation or conversation.
       `;
 
+      logger.debug('Calling OpenAI API for feedback', { 
+        userId,
+        model: 'gpt-4-turbo',
+        targetLanguage
+      });
+      
       const response = await axios.post(
         this.apiUrl,
         {
@@ -133,12 +179,22 @@ class ChatGPTService {
       );
 
       const feedbackText = response.data.choices[0].message.content.trim();
+      logger.debug('Received feedback response', {
+        userId,
+        responseLength: feedbackText.length,
+        promptTokens: response.data.usage?.prompt_tokens,
+        completionTokens: response.data.usage?.completion_tokens
+      });
       
       // Parse JSON response
       try {
         return JSON.parse(feedbackText);
       } catch (parseError) {
-        console.error('Error parsing feedback JSON:', parseError);
+        logger.error('Error parsing feedback JSON', { 
+          userId,
+          error: parseError.message,
+          rawResponse: feedbackText
+        });
         // Fallback structure if JSON parsing fails
         return {
           title: 'Learning Tip',
@@ -149,7 +205,13 @@ class ChatGPTService {
         };
       }
     } catch (error) {
-      console.error('Error generating feedback:', error);
+      logger.error('Error generating feedback', { 
+        userId,
+        error: error.message,
+        statusCode: error.response?.status,
+        statusText: error.response?.statusText,
+        errorData: error.response?.data
+      });
       throw new Error('Failed to generate feedback');
     }
   }
@@ -159,6 +221,7 @@ class ChatGPTService {
    * @param {string} userId - User identifier
    */
   clearConversation(userId) {
+    logger.info('Clearing conversation history', { userId });
     this.conversationHistory.delete(userId);
   }
 }

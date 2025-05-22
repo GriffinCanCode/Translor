@@ -8,12 +8,18 @@ const Store = require('electron-store');
 const store = new Store();
 const isDev = process.env.NODE_ENV === 'development';
 
+// Import the logger
+const { logger, createContextLogger } = require('./src/utils/logger');
+
 // Keep a global reference of the window object to avoid garbage collection
 let mainWindow;
 
 // User data paths
 const USER_DATA_PATH = path.join(app.getPath('userData'), 'userData.json');
 const LESSONS_DATA_PATH = path.join(app.getPath('userData'), 'lessons.json');
+
+// Log application startup
+logger.info('Application starting', { version: app.getVersion(), env: process.env.NODE_ENV });
 
 // Initialize store with default values if empty
 if (!store.has('userSettings')) {
@@ -24,6 +30,7 @@ if (!store.has('userSettings')) {
     notifications: true,
     theme: 'light'
   });
+  logger.info('Initialized default user settings');
 }
 
 if (!store.has('userProgress')) {
@@ -34,10 +41,12 @@ if (!store.has('userProgress')) {
     lastActive: new Date().toISOString(),
     achievements: []
   });
+  logger.info('Initialized default user progress');
 }
 
 // Create the browser window
 function createWindow() {
+  logger.debug('Creating main window');
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -52,35 +61,60 @@ function createWindow() {
     show: false
   });
 
+  // Set Content Security Policy
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "connect-src 'self' ws: wss: https://api.openai.com https://*.openai.com;",
+          "img-src 'self' data: blob:;",
+          "media-src 'self' data: blob:;",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+          "font-src 'self' https://fonts.gstatic.com;",
+          "object-src 'none';"
+        ].join(' ')
+      }
+    });
+  });
+  
   // Load the app
   if (isDev) {
     // In development, load from webpack dev server
-    mainWindow.loadURL('http://localhost:3000');
+    logger.debug('Loading application in development mode');
+    mainWindow.loadURL('http://localhost:3003');
     // Open DevTools
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from dist directory
+    logger.debug('Loading application in production mode');
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     if (fs.existsSync(indexPath)) {
       mainWindow.loadFile(indexPath);
     } else {
-      console.error(`Index file not found at: ${indexPath}`);
+      const errorMsg = `Index file not found at: ${indexPath}`;
+      logger.error(errorMsg);
       dialog.showErrorBox('Loading Error', 'Could not find application resources. Try rebuilding the application.');
     }
   }
 
   mainWindow.once('ready-to-show', () => {
+    logger.debug('Main window ready to show');
     mainWindow.show();
   });
 
   // Emitted when the window is closed
   mainWindow.on('closed', () => {
+    logger.debug('Main window closed');
     mainWindow = null;
   });
 }
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
+  logger.info('Electron ready, creating window');
   createWindow();
 
   // Initialize user data if not exists
@@ -90,18 +124,31 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked
-    if (mainWindow === null) createWindow();
+    if (mainWindow === null) {
+      logger.debug('Activated application, creating window');
+      createWindow();
+    }
   });
 });
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  logger.debug('All windows closed');
+  if (process.platform !== 'darwin') {
+    logger.info('Application quitting');
+    app.quit();
+  }
+});
+
+// Log when app is going to quit
+app.on('will-quit', () => {
+  logger.info('Application will quit');
 });
 
 // Initialize user data file if it doesn't exist
 function initializeUserData() {
   if (!fs.existsSync(USER_DATA_PATH)) {
+    logger.info('Creating user data file', { path: USER_DATA_PATH });
     const initialData = {
       user: {
         name: 'User',
@@ -124,6 +171,7 @@ function initializeUserData() {
 // Initialize lessons data file if it doesn't exist
 function initializeLessonsData() {
   if (!fs.existsSync(LESSONS_DATA_PATH)) {
+    logger.info('Creating lessons data file', { path: LESSONS_DATA_PATH });
     const initialData = {
       chapters: [
         {
@@ -183,7 +231,7 @@ function getUserData() {
     const data = fs.readFileSync(USER_DATA_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading user data:', error);
+    logger.error('Error reading user data', { error });
     return null;
   }
 }
@@ -192,9 +240,10 @@ function getUserData() {
 function saveUserData(data) {
   try {
     fs.writeFileSync(USER_DATA_PATH, JSON.stringify(data, null, 2));
+    logger.debug('User data saved successfully');
     return true;
   } catch (error) {
-    console.error('Error saving user data:', error);
+    logger.error('Error saving user data', { error });
     return false;
   }
 }
@@ -205,27 +254,31 @@ function getLessonsData() {
     const data = fs.readFileSync(LESSONS_DATA_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading lessons data:', error);
+    logger.error('Error reading lessons data', { error });
     return null;
   }
 }
 
 // IPC handlers for communication with renderer process
 ipcMain.handle('get-user-settings', async () => {
+  logger.debug('Fetching user settings');
   return store.get('userSettings');
 });
 
 ipcMain.handle('get-user-progress', async () => {
+  logger.debug('Fetching user progress');
   return store.get('userProgress');
 });
 
 ipcMain.handle('save-progress', async (_, progressData) => {
+  logger.debug('Saving user progress', { progressData });
   const currentProgress = store.get('userProgress');
   store.set('userProgress', { ...currentProgress, ...progressData });
   return { success: true };
 });
 
 ipcMain.handle('update-xp', async (_, amount) => {
+  logger.debug('Updating XP', { amount });
   const currentProgress = store.get('userProgress');
   const newXP = currentProgress.xp + amount;
   store.set('userProgress.xp', newXP);
@@ -243,8 +296,10 @@ ipcMain.handle('update-xp', async (_, amount) => {
       lastActive.getFullYear() === yesterday.getFullYear();
     
     if (isConsecutiveDay) {
+      logger.info('User streak increased', { newStreak: currentProgress.streak + 1 });
       store.set('userProgress.streak', currentProgress.streak + 1);
     } else {
+      logger.info('User streak reset', { oldStreak: currentProgress.streak });
       store.set('userProgress.streak', 1);
     }
   }
@@ -258,6 +313,7 @@ ipcMain.handle('update-xp', async (_, amount) => {
 });
 
 ipcMain.handle('save-user-settings', async (_, settings) => {
+  logger.debug('Saving user settings', { settings });
   store.set('userSettings', settings);
   return { success: true };
 });
@@ -265,14 +321,17 @@ ipcMain.handle('save-user-settings', async (_, settings) => {
 ipcMain.handle('unlock-achievement', async (_, achievementId) => {
   const currentProgress = store.get('userProgress');
   if (!currentProgress.achievements.includes(achievementId)) {
+    logger.info('Achievement unlocked', { achievementId });
     const updatedAchievements = [...currentProgress.achievements, achievementId];
     store.set('userProgress.achievements', updatedAchievements);
     return { success: true, achievements: updatedAchievements };
   }
+  logger.debug('Achievement already unlocked', { achievementId });
   return { success: false, message: 'Achievement already unlocked' };
 });
 
 ipcMain.handle('get-lessons', async () => {
+  logger.debug('Fetching all lessons');
   try {
     const lessonsPath = isDev 
       ? path.join(__dirname, 'src/lessons') 
@@ -288,12 +347,13 @@ ipcMain.handle('get-lessons', async () => {
     
     return lessons;
   } catch (error) {
-    console.error('Error loading lessons:', error);
+    logger.error('Error loading lessons', { error });
     return [];
   }
 });
 
 ipcMain.handle('get-lesson-by-id', async (_, lessonId) => {
+  logger.debug('Fetching lesson by ID', { lessonId });
   try {
     const lessonsPath = isDev 
       ? path.join(__dirname, 'src/lessons') 
@@ -305,19 +365,29 @@ ipcMain.handle('get-lesson-by-id', async (_, lessonId) => {
       const data = fs.readFileSync(filePath, 'utf8');
       return JSON.parse(data);
     } else {
+      logger.warn('Lesson not found', { lessonId });
       return { error: 'Lesson not found' };
     }
   } catch (error) {
-    console.error(`Error loading lesson ${lessonId}:`, error);
+    logger.error(`Error loading lesson`, { lessonId, error });
     return { error: 'Failed to load lesson' };
   }
+});
+
+// Handle log messages from the renderer process
+ipcMain.handle('log', (event, logData) => {
+  const { level, message, context } = logData;
+  if (logger[level]) {
+    logger[level](message, { source: 'renderer', ...context });
+  }
+  return true;
 });
 
 // Translation and speech API handlers would connect to external services
 // These are placeholder implementations
 ipcMain.handle('translate-text', async (_, text, targetLanguage, sourceLanguage) => {
   // In a real app, this would call a translation API
-  console.log(`Translating from ${sourceLanguage} to ${targetLanguage}: ${text}`);
+  logger.debug('Translating text', { text, targetLanguage, sourceLanguage });
   return { 
     translation: `[Translation of "${text}" to ${targetLanguage}]`,
     sourceLanguage: sourceLanguage || 'auto-detected'
@@ -326,7 +396,7 @@ ipcMain.handle('translate-text', async (_, text, targetLanguage, sourceLanguage)
 
 ipcMain.handle('speech-to-text', async (_, audioData, language) => {
   // In a real app, this would send audio to a speech recognition API
-  console.log(`Converting speech to text in ${language}`);
+  logger.debug('Converting speech to text', { language });
   return {
     text: '[Transcribed text would appear here]'
   };
@@ -334,7 +404,7 @@ ipcMain.handle('speech-to-text', async (_, audioData, language) => {
 
 ipcMain.handle('text-to-speech', async (_, text, language) => {
   // In a real app, this would generate audio from text
-  console.log(`Converting text to speech in ${language}: ${text}`);
+  logger.debug('Converting text to speech', { text, language });
   return {
     audioUrl: '[Audio data would be returned here]'
   };
@@ -344,12 +414,12 @@ ipcMain.handle('text-to-speech', async (_, text, language) => {
 let recordingInterval;
 
 ipcMain.on('start-recording', () => {
-  console.log('Started recording audio');
+  logger.debug('Started recording audio');
   // In a real app, this would initialize audio recording
 });
 
 ipcMain.handle('stop-recording', async () => {
-  console.log('Stopped recording audio');
+  logger.debug('Stopped recording audio');
   // In a real app, this would stop recording and return the audio data
   return {
     audioData: '[Recorded audio data would be here]'
@@ -358,7 +428,7 @@ ipcMain.handle('stop-recording', async () => {
 
 // Example IPC handler (can be expanded)
 ipcMain.handle('example-ipc', async (event, arg) => {
-  console.log('IPC message received:', arg);
+  logger.debug('IPC message received', { arg });
   return `Response from main process: ${arg}`;
 });
 
@@ -372,6 +442,7 @@ const server = http.createServer(backendApp);
 backendApp.use(express.json());
 
 backendApp.get('/api/test', (req, res) => {
+  logger.debug('API test endpoint called');
   res.json({ message: 'Hello from Translor backend!' });
 });
 
@@ -381,18 +452,18 @@ function startServer(port) {
   try {
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
-        console.warn(`Port ${port} is already in use, trying port ${port + 1}`);
+        logger.warn(`Port ${port} is already in use, trying port ${port + 1}`);
         startServer(port + 1);
       } else {
-        console.error('Error starting the server:', error);
+        logger.error('Error starting the server', { error });
       }
     });
     
     server.listen(port, () => {
-      console.log(`Translor backend server running on http://localhost:${port}`);
+      logger.info(`Backend server running on port ${port}`);
     });
   } catch (error) {
-    console.error('Failed to start backend server:', error);
+    logger.error('Failed to start backend server', { error });
   }
 }
 

@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import useLogger from '../../utils/useLogger';
 
-const Feedback = ({ data, onClose }) => {
-  if (!data) return null;
+const Feedback = ({ feedbackData, onClose }) => {
+  const logger = useLogger({ component: 'Feedback' });
   
-  const { title, grammar, vocabulary, alternatives, practice } = data;
+  useEffect(() => {
+    if (feedbackData) {
+      logger.debug('Showing feedback', {
+        title: feedbackData.title,
+        hasGrammar: !!feedbackData.grammar,
+        hasVocabulary: !!feedbackData.vocabulary
+      });
+    }
+  }, [feedbackData, logger]);
+  
+  if (!feedbackData) return null;
+  
+  const { title, grammar, vocabulary, alternatives, practice } = feedbackData;
+  
+  const handleClose = () => {
+    logger.debug('Closing feedback');
+    onClose();
+  };
   
   return (
     <div className="p-4 mx-4 mb-4 bg-amber-50 border border-amber-200 rounded-lg shadow-sm">
@@ -15,7 +33,7 @@ const Feedback = ({ data, onClose }) => {
           {title}
         </h3>
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           className="text-amber-600 hover:text-amber-800"
           aria-label="Close feedback"
         >

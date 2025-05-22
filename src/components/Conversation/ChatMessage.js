@@ -1,9 +1,27 @@
 import React, { useState } from 'react';
+import useLogger from '../../utils/useLogger';
 
-const ChatMessage = ({ message, onPlay }) => {
+const ChatMessage = ({ message, onPlayAudio, isAudioPlaying }) => {
   const [showTranslation, setShowTranslation] = useState(true);
+  const logger = useLogger({ component: 'ChatMessage', messageId: message.id });
   
   const isAI = message.sender === 'ai';
+  
+  const handleToggleTranslation = () => {
+    logger.debug('Toggling translation visibility', { 
+      messageId: message.id,
+      newState: !showTranslation ? 'shown' : 'hidden' 
+    });
+    setShowTranslation(!showTranslation);
+  };
+  
+  const handlePlayAudio = () => {
+    logger.debug('Playing audio for message', { 
+      messageId: message.id, 
+      language: message.language 
+    });
+    onPlayAudio();
+  };
   
   return (
     <div className={`flex ${isAI ? 'justify-start' : 'justify-end'}`}>
@@ -18,9 +36,13 @@ const ChatMessage = ({ message, onPlay }) => {
             </div>
             {isAI && (
               <button 
-                onClick={onPlay}
-                className="text-primary-600 hover:text-primary-800"
+                onClick={handlePlayAudio}
+                className={`
+                  text-primary-600 hover:text-primary-800
+                  ${isAudioPlaying ? 'animate-pulse' : ''}
+                `}
                 title="Play pronunciation"
+                disabled={isAudioPlaying}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
@@ -36,7 +58,7 @@ const ChatMessage = ({ message, onPlay }) => {
           {isAI && message.translation && (
             <div className="mt-2 pt-2 border-t border-gray-200">
               <button 
-                onClick={() => setShowTranslation(!showTranslation)}
+                onClick={handleToggleTranslation}
                 className="text-xs text-gray-500 flex items-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-4 h-4 mr-1 transition-transform ${showTranslation ? 'rotate-180' : ''}`}>

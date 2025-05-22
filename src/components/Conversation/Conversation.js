@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-
 import { useUser } from '../../contexts/UserContext';
 import TranslationService from '../../services/TranslationService';
 import ChatGPTService from '../../services/ChatGPTService';
+import useLogger from '../../utils/useLogger';
 
 // Import components
 import ChatMessage from './ChatMessage';
@@ -18,6 +18,7 @@ const generateUniqueId = () => {
 
 const Conversation = () => {
   const { targetLanguage, nativeLanguage, addXp, userId, proficiencyLevel } = useUser();
+  const logger = useLogger({ component: 'Conversation', userId });
   
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -29,6 +30,19 @@ const Conversation = () => {
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
 
+  // Log component initialization
+  useEffect(() => {
+    logger.info('Conversation component initialized', { 
+      targetLanguage, 
+      nativeLanguage, 
+      proficiencyLevel 
+    });
+    
+    return () => {
+      logger.debug('Conversation component unmounting');
+    };
+  }, [logger, targetLanguage, nativeLanguage, proficiencyLevel]);
+
   // Scroll to bottom of messages
   useEffect(() => {
     scrollToBottom();
@@ -37,19 +51,30 @@ const Conversation = () => {
   // Handle audio playback state
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.onplay = () => setIsAudioPlaying(true);
-      audioRef.current.onended = () => setIsAudioPlaying(false);
-      audioRef.current.onpause = () => setIsAudioPlaying(false);
+      audioRef.current.onplay = () => {
+        setIsAudioPlaying(true);
+        logger.debug('Audio playback started');
+      };
+      audioRef.current.onended = () => {
+        setIsAudioPlaying(false);
+        logger.debug('Audio playback ended');
+      };
+      audioRef.current.onpause = () => {
+        setIsAudioPlaying(false);
+        logger.debug('Audio playback paused');
+      };
     }
-  }, [audioRef]);
+  }, [audioRef, logger]);
 
   // Handle initial greeting when component mounts
   useEffect(() => {
     const greetUser = async () => {
+      logger.info('Starting initial greeting');
       try {
         setIsProcessing(true);
         
         // Get AI greeting in target language
+        logger.debug('Requesting AI greeting', { targetLanguage });
         const greeting = await ChatGPTService.getResponse(
           userId, 
           targetLanguage, 
@@ -58,6 +83,10 @@ const Conversation = () => {
         );
         
         // Translate greeting to native language for reference
+        logger.debug('Translating AI greeting', { 
+          from: targetLanguage, 
+          to: nativeLanguage 
+        });
         const translation = await TranslationService.translateText(
           greeting, 
           nativeLanguage, 
@@ -65,6 +94,7 @@ const Conversation = () => {
         );
         
         // Add greeting to messages
+        logger.debug('Adding greeting to conversation', { greeting });
         addMessage({
           id: generateUniqueId(),
           text: greeting,
@@ -76,9 +106,10 @@ const Conversation = () => {
         // Speak greeting
         speakText(greeting, targetLanguage);
       } catch (error) {
-        console.error('Error greeting user:', error);
+        logger.error('Error greeting user', { error: error.message });
         
         // Fallback to simple greeting if API fails
+        logger.debug('Using fallback greeting');
         const fallbackGreeting = getRandomGreeting(targetLanguage);
         addMessage({
           id: generateUniqueId(),
@@ -97,9 +128,10 @@ const Conversation = () => {
     
     // Clean up conversation history when component unmounts
     return () => {
+      logger.debug('Clearing conversation history');
       ChatGPTService.clearConversation(userId);
     };
-  }, []);
+  }, [userId, targetLanguage, nativeLanguage, proficiencyLevel, logger]);
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -108,6 +140,11 @@ const Conversation = () => {
 
   // Add message to chat
   const addMessage = (message) => {
+    logger.debug('Adding message to conversation', { 
+      sender: message.sender, 
+      language: message.language,
+      messageId: message.id
+    });
     setMessages(prevMessages => [...prevMessages, message]);
   };
 
@@ -118,6 +155,9 @@ const Conversation = () => {
     if (!inputText.trim() || isProcessing) return;
     
     try {
+      logger.info('Processing user text input', { 
+        inputLength: inputText.length 
+      });
       setIsProcessing(true);
       
       // Add user message
@@ -132,6 +172,10 @@ const Conversation = () => {
       setInputText('');
       
       // Translate user message to target language
+      logger.debug('Translating user message', { 
+        from: nativeLanguage, 
+        to: targetLanguage 
+      });
       const translation = await TranslationService.translateText(
         inputText, 
         targetLanguage,
@@ -142,9 +186,10 @@ const Conversation = () => {
       await processAIResponse(translation.translatedText);
       
       // Award XP for conversation interaction
+      logger.debug('Awarding XP for conversation', { xpAmount: 5 });
       addXp(5);
     } catch (error) {
-      console.error('Error processing message:', error);
+      logger.error('Error processing message', { error: error.message });
     } finally {
       setIsProcessing(false);
     }
@@ -152,8 +197,13 @@ const Conversation = () => {
 
   // Process and generate AI response
   const processAIResponse = async (translatedUserInput) => {
+    logger.info('Processing AI response', { 
+      inputLength: translatedUserInput.length
+    });
+    
     try {
       // Get AI response from ChatGPT
+      logger.debug('Requesting AI response');
       const aiResponseText = await ChatGPTService.getResponse(
         userId,
         targetLanguage,
@@ -162,6 +212,10 @@ const Conversation = () => {
       );
       
       // Translate AI response to native language for reference
+      logger.debug('Translating AI response', { 
+        from: targetLanguage, 
+        to: nativeLanguage 
+      });
       const translation = await TranslationService.translateText(
         aiResponseText, 
         nativeLanguage, 
@@ -180,6 +234,7 @@ const Conversation = () => {
       addMessage(aiMessage);
       
       // Generate learning feedback based on conversation
+      logger.debug('Generating learning feedback');
       const feedback = await ChatGPTService.generateFeedback(
         userId, 
         translatedUserInput, 
@@ -191,9 +246,10 @@ const Conversation = () => {
       // Speak AI response
       speakText(aiResponseText, targetLanguage);
     } catch (error) {
-      console.error('Error generating AI response:', error);
+      logger.error('Error generating AI response', { error: error.message });
       
       // Fallback to mock response if API fails
+      logger.debug('Using fallback AI response');
       const fallbackResponse = mockAIResponse(translatedUserInput, targetLanguage);
       
       // Add fallback message
@@ -206,101 +262,158 @@ const Conversation = () => {
       
       addMessage(fallbackMessage);
       
-      // Use mock feedback
-      setFeedbackData(generateFeedback(translatedUserInput, fallbackResponse));
+      // Generate basic feedback
+      const basicFeedback = generateFeedback(translatedUserInput, fallbackResponse);
+      setFeedbackData(basicFeedback);
       
       // Speak fallback response
       speakText(fallbackResponse, targetLanguage);
     }
   };
 
-  // Handle voice input
+  // Handle voice input for speaking practice
   const handleVoiceInput = async () => {
-    try {
-      if (isRecording) {
+    if (isProcessing) return;
+    
+    if (!isRecording) {
+      // Start recording
+      logger.info('Starting voice recording');
+      setIsRecording(true);
+      
+      try {
+        await TranslationService.startRecording();
+      } catch (error) {
+        logger.error('Failed to start recording', { error: error.message });
         setIsRecording(false);
-        setIsProcessing(true);
+      }
+    } else {
+      // Stop recording and process audio
+      logger.info('Stopping voice recording');
+      setIsRecording(false);
+      setIsProcessing(true);
+      
+      try {
+        // Get recording data
+        const recordingResult = await TranslationService.stopRecording();
         
-        // Stop recording and get audio data
-        const audioData = await TranslationService.stopRecording();
+        if (!recordingResult.success) {
+          throw new Error('Recording failed');
+        }
+        
+        logger.debug('Audio recording stopped', { 
+          blobSize: recordingResult.audioBlob.size
+        });
         
         // Convert speech to text
-        const result = await TranslationService.speechToText(audioData, nativeLanguage);
+        logger.debug('Converting speech to text', { sourceLanguage: nativeLanguage });
+        const speechResult = await TranslationService.speechToText(
+          recordingResult.audioBlob,
+          nativeLanguage
+        );
         
-        if (result.success && result.text) {
-          // Automatically submit the voice input
-          const userMessage = {
-            id: generateUniqueId(),
-            text: result.text,
-            sender: 'user',
-            language: nativeLanguage
-          };
-          
-          addMessage(userMessage);
-          
-          // Translate user message to target language
-          const translation = await TranslationService.translateText(
-            result.text, 
-            targetLanguage,
-            nativeLanguage
-          );
-          
-          // Process AI response
-          await processAIResponse(translation.translatedText);
-          
-          // Award XP for voice interaction (extra points for speaking)
-          addXp(8);
+        if (!speechResult.success) {
+          throw new Error('Speech recognition failed');
         }
-      } else {
-        setIsRecording(true);
-        await TranslationService.startRecording();
+        
+        // Add user speech message
+        const userMessage = {
+          id: generateUniqueId(),
+          text: speechResult.text,
+          sender: 'user',
+          language: nativeLanguage,
+          audioUrl: recordingResult.audioUrl
+        };
+        
+        logger.debug('Adding speech message to conversation', { 
+          text: speechResult.text
+        });
+        addMessage(userMessage);
+        
+        // Translate speech to target language
+        logger.debug('Translating user speech', {
+          from: nativeLanguage,
+          to: targetLanguage
+        });
+        const translation = await TranslationService.translateText(
+          speechResult.text,
+          targetLanguage,
+          nativeLanguage
+        );
+        
+        // Process AI response
+        await processAIResponse(translation.translatedText);
+        
+        // Award XP for voice practice
+        logger.debug('Awarding XP for voice practice', { xpAmount: 10 });
+        addXp(10); // More XP for voice practice
+      } catch (error) {
+        logger.error('Error processing voice input', { error: error.message });
+        
+        // Add error message if needed
+        // addMessage({
+        //   id: generateUniqueId(),
+        //   text: "Sorry, I couldn't understand that. Please try again.",
+        //   sender: 'system',
+        //   language: nativeLanguage
+        // });
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Voice input error:', error);
-      setIsRecording(false);
-    } finally {
-      setIsProcessing(false);
     }
   };
 
-  // Play text-to-speech audio
+  // Text to speech function
   const speakText = async (text, language) => {
+    logger.info('Converting text to speech', { 
+      language, 
+      textLength: text.length
+    });
+    
     try {
-      // Don't interrupt currently playing audio
-      if (isAudioPlaying) {
+      if (audioRef.current?.src) {
+        // Stop any currently playing audio
         audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
       }
       
-      const result = await TranslationService.textToSpeech(text, language);
+      // Get TTS audio
+      const ttsResult = await TranslationService.textToSpeech(text, language);
       
-      if (result.success && result.audioUrl) {
-        if (audioRef.current) {
-          audioRef.current.src = result.audioUrl;
-          audioRef.current.play();
-        }
+      if (!ttsResult.success) {
+        logger.warn('Text-to-speech failed', { error: ttsResult.error });
+        return;
       }
+      
+      logger.debug('Speech audio generated', { provider: ttsResult.provider });
+      
+      // Update audio element
+      audioRef.current.src = ttsResult.audioUrl;
+      audioRef.current.play();
     } catch (error) {
-      console.error('Text-to-speech error:', error);
+      logger.error('Error in text-to-speech', { error: error.message });
     }
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.map(message => (
-          <ChatMessage 
-            key={message.id} 
-            message={message} 
-            onPlay={() => speakText(message.text, message.language)}
-          />
-        ))}
-        <div ref={messagesEndRef} />
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-3xl mx-auto">
+          {messages.map(message => (
+            <ChatMessage 
+              key={message.id}
+              message={message}
+              onPlayAudio={() => speakText(message.text, message.language)}
+              isAudioPlaying={isAudioPlaying}
+            />
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
       
       {feedbackData && (
         <Feedback 
-          data={feedbackData} 
-          onClose={() => setFeedbackData(null)} 
+          feedbackData={feedbackData} 
+          onClose={() => setFeedbackData(null)}
         />
       )}
       
@@ -308,8 +421,8 @@ const Conversation = () => {
         inputText={inputText}
         setInputText={setInputText}
         handleSubmit={handleSubmit}
-        handleVoiceInput={handleVoiceInput}
         isRecording={isRecording}
+        toggleRecording={handleVoiceInput}
         isProcessing={isProcessing}
       />
       
@@ -318,67 +431,57 @@ const Conversation = () => {
   );
 };
 
-// Helper function for random greeting (fallback if API fails)
 function getRandomGreeting(language) {
   const greetings = {
-    'es': ['¡Hola! ¿Cómo estás?', '¡Buenos días!', '¡Bienvenido!'],
-    'fr': ['Bonjour! Comment allez-vous?', 'Salut!', 'Bienvenue!'],
-    'de': ['Hallo! Wie geht es dir?', 'Guten Tag!', 'Willkommen!'],
-    'it': ['Ciao! Come stai?', 'Buongiorno!', 'Benvenuto!'],
-    'pt': ['Olá! Como vai?', 'Bom dia!', 'Bem-vindo!'],
-    'en': ['Hello! How are you?', 'Good day!', 'Welcome!']
+    'en': ['Hello! How can I help you today?', 'Hi there! Ready to practice?'],
+    'es': ['¡Hola! ¿Cómo puedo ayudarte hoy?', '¡Hola! ¿Listo para practicar?'],
+    'fr': ['Bonjour! Comment puis-je vous aider aujourd\'hui?', 'Salut! Prêt à pratiquer?'],
+    'de': ['Hallo! Wie kann ich Ihnen heute helfen?', 'Hallo! Bereit zu üben?']
   };
   
-  const defaultGreetings = ['Hello! How are you?', 'Welcome!'];
-  const languageGreetings = greetings[language] || defaultGreetings;
+  const languageGreetings = greetings[language] || greetings.en;
+  const randomIndex = Math.floor(Math.random() * languageGreetings.length);
   
-  return languageGreetings[Math.floor(Math.random() * languageGreetings.length)];
+  return languageGreetings[randomIndex];
 }
 
-// Mock AI response function (fallback if API fails)
 function mockAIResponse(translatedUserInput, language) {
   const responses = {
+    'en': [
+      'I understand. Could you tell me more about that?',
+      'That\'s interesting! Let\'s continue practicing.',
+      'Great job expressing that! How do you feel about it?'
+    ],
     'es': [
-      '¡Qué interesante! Cuéntame más.',
-      'Entiendo. ¿Y qué piensas sobre eso?',
-      'Muy bien. ¿Qué más puedo hacer por ti?',
-      '¡Excelente! Sigamos practicando.',
+      'Entiendo. ¿Podrías contarme más sobre eso?',
+      '¡Eso es interesante! Sigamos practicando.',
+      '¡Buen trabajo expresando eso! ¿Cómo te sientes al respecto?'
     ],
     'fr': [
-      'C\'est intéressant! Dites-m\'en plus.',
-      'Je comprends. Et que pensez-vous de cela?',
-      'Très bien. Que puis-je faire d\'autre pour vous?',
-      'Excellent! Continuons à pratiquer.',
+      'Je comprends. Pourriez-vous m\'en dire plus?',
+      'C\'est intéressant! Continuons à pratiquer.',
+      'Bon travail pour exprimer cela! Comment vous sentez-vous à ce sujet?'
     ],
     'de': [
-      'Wie interessant! Erzählen Sie mir mehr.',
-      'Ich verstehe. Und was denken Sie darüber?',
-      'Sehr gut. Was kann ich noch für Sie tun?',
-      'Ausgezeichnet! Lass uns weiter üben.',
-    ],
-    'en': [
-      'How interesting! Tell me more.',
-      'I understand. And what do you think about that?',
-      'Very good. What else can I do for you?',
-      'Excellent! Let\'s keep practicing.',
+      'Ich verstehe. Könnten Sie mir mehr darüber erzählen?',
+      'Das ist interessant! Lass uns weiter üben.',
+      'Gute Arbeit, das auszudrücken! Wie fühlst du dich dabei?'
     ]
   };
   
-  const defaultResponses = responses.en;
-  const languageResponses = responses[language] || defaultResponses;
+  const languageResponses = responses[language] || responses.en;
+  const randomIndex = Math.floor(Math.random() * languageResponses.length);
   
-  return languageResponses[Math.floor(Math.random() * languageResponses.length)];
+  return languageResponses[randomIndex];
 }
 
-// Generate feedback based on user input and AI response (fallback if API fails)
 function generateFeedback(userInput, aiResponse) {
-  // Fallback feedback if ChatGPT feedback generation fails
   return {
     title: 'Learning Tip',
-    grammar: 'Remember to use the correct verb conjugation.',
-    vocabulary: 'You might also want to use "interesante" (interesting) in your responses.',
-    alternatives: 'Instead of "Sí", try using "Efectivamente" or "Por supuesto" for variety.',
-    practice: 'Try asking a question in your next response.'
+    grammar: 'Watch your sentence structure and verb conjugation.',
+    vocabulary: 'Try expanding your vocabulary with more specific terms.',
+    alternatives: 'Consider using different phrases for variation.',
+    practice: 'Keep practicing with more complex sentences and topics.'
   };
 }
 

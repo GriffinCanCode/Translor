@@ -1,7 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import useLogger from '../../utils/useLogger';
 
 const NotFound = () => {
+  const location = useLocation();
+  const logger = useLogger({ component: 'NotFound' });
+  
+  useEffect(() => {
+    logger.warn('404 Not Found accessed', { 
+      path: location.pathname,
+      search: location.search
+    });
+  }, [location, logger]);
+
   return (
     <div className="min-h-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
@@ -13,7 +24,9 @@ const NotFound = () => {
           </p>
         </div>
         <div className="mt-8">
-          <Link to="/" className="btn btn-primary inline-flex items-center">
+          <Link to="/" 
+                onClick={() => logger.debug('Navigating from 404 to Dashboard')}
+                className="btn btn-primary inline-flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
             </svg>
