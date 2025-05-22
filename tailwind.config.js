@@ -5,6 +5,7 @@ module.exports = {
     "./src/**/*.html",
     "./index.html"
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -31,7 +32,16 @@ module.exports = {
           700: '#6d28d9',
           800: '#5b21b6',
           900: '#4c1d95',
-        }
+        },
+        'bg-primary': 'var(--color-bg-primary)',
+        'bg-secondary': 'var(--color-bg-secondary)',
+        'bg-tertiary': 'var(--color-bg-tertiary)',
+        'bg-elevated': 'var(--color-bg-elevated)',
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-tertiary': 'var(--color-text-tertiary)',
+        'border-primary': 'var(--color-border-primary)',
+        'border-secondary': 'var(--color-border-secondary)',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
@@ -39,6 +49,13 @@ module.exports = {
       },
       animation: {
         'bounce-slow': 'bounce 3s infinite',
+      },
+      backgroundColor: {
+        'hover': 'var(--color-hover-bg)',
+        'active': 'var(--color-active-bg)',
+      },
+      boxShadow: {
+        'focus': '0 0 0 2px var(--color-focus-ring)',
       }
     }
   },

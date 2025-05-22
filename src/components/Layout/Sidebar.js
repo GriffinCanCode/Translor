@@ -53,32 +53,34 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 pt-5 pb-4 flex flex-col">
-      <div className="flex flex-col flex-grow">
-        <nav className="mt-5 flex-1 px-2 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `group flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-              end={item.path === '/'}
-            >
-              <div className="mr-3 flex-shrink-0">{item.icon}</div>
-              {item.name}
-            </NavLink>
-          ))}
+    <div className="w-64 bg-bg-elevated border-r border-border-primary pt-5 pb-4 flex flex-col overflow-hidden">
+      <div className="flex flex-col flex-grow overflow-hidden">
+        <nav className="mt-5 flex-1 px-2 space-y-1 overflow-y-auto">
+          <div className="space-y-1 bg-bg-elevated">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `group flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                  }`
+                }
+                end={item.path === '/'}
+              >
+                <div className="mr-3 flex-shrink-0">{item.icon}</div>
+                {item.name}
+              </NavLink>
+            ))}
+          </div>
         </nav>
       </div>
       
-      <div className="mt-auto px-3 py-4">
+      <div className="mt-auto px-3 py-4 bg-bg-elevated border-t border-border-primary">
         <div className="flex items-center">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-text-tertiary">
             <div>Translor v0.1.0</div>
             <div>© 2023</div>
           </div>

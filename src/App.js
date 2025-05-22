@@ -5,6 +5,7 @@ import useLogger from './utils/useLogger';
 // Import contexts
 import { UserProvider } from './contexts/UserContext';
 import { LessonProvider } from './contexts/LessonContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Import pages/components
 import Layout from './components/Layout/Layout';
@@ -72,11 +73,16 @@ function App() {
   }, [logger]);
 
   return (
+<<<<<<< HEAD
     <ErrorBoundary>
+=======
+    <ThemeProvider>
+>>>>>>> origin/Brian
       <UserProvider>
         <LessonProvider>
           <Routes>
             <Route path="/" element={<Layout />}>
+<<<<<<< HEAD
               <Route index element={
                 <ErrorBoundary showResetButton>
                   <Dashboard />
@@ -107,13 +113,25 @@ function App() {
                   <Settings />
                 </ErrorBoundary>
               } />
+=======
+              <Route index element={<Dashboard />} />
+              <Route path="conversation" element={<Conversation />} />
+              <Route path="lessons" element={<Lessons />} />
+              <Route path="lessons/:lessonId" element={<LessonDetail />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+>>>>>>> origin/Brian
               <Route path="404" element={<NotFound />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Route>
           </Routes>
         </LessonProvider>
       </UserProvider>
+<<<<<<< HEAD
     </ErrorBoundary>
+=======
+    </ThemeProvider>
+>>>>>>> origin/Brian
   );
 }
 

@@ -90,14 +90,14 @@ const Profile = () => {
             </Link>
           </div>
         </div>
-        <div className="border-t border-gray-200 px-4 py-4 sm:px-6">
+        <div className="border-t border-border-primary px-4 py-4 sm:px-6">
           <div className="flex justify-between items-center text-sm">
             <div>
-              <span className="text-gray-500">Learning:</span>{' '}
+              <span className="text-text-tertiary">Learning:</span>{' '}
               <span className="font-medium">{getLanguageName(targetLanguage)}</span>
             </div>
             <div>
-              <span className="text-gray-500">Native language:</span>{' '}
+              <span className="text-text-tertiary">Native language:</span>{' '}
               <span className="font-medium">{getLanguageName(nativeLanguage)}</span>
             </div>
           </div>
@@ -105,14 +105,14 @@ const Profile = () => {
       </div>
       
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-border-primary">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('stats')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'stats'
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-primary'
             }`}
           >
             Stats
@@ -122,7 +122,7 @@ const Profile = () => {
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'achievements'
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-primary'
             }`}
           >
             Achievements

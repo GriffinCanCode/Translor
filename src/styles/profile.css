@@ -3,7 +3,7 @@
 @import './index.css';
 
 .profile-header {
-  @apply bg-white shadow rounded-lg p-6 mb-6;
+  @apply bg-bg-elevated shadow rounded-lg p-6 mb-6;
 }
 
 .profile-avatar {
@@ -19,15 +19,15 @@
 }
 
 .profile-name {
-  @apply text-2xl font-bold text-gray-900 mt-4 sm:mt-0;
+  @apply text-2xl font-bold text-text-primary mt-4 sm:mt-0;
 }
 
 .profile-username {
-  @apply text-gray-500 mb-2;
+  @apply text-text-tertiary mb-2;
 }
 
 .profile-bio {
-  @apply text-gray-600 mt-2;
+  @apply text-text-secondary mt-2;
 }
 
 .profile-stats {
@@ -39,11 +39,11 @@
 }
 
 .profile-stat-value {
-  @apply text-2xl font-semibold text-gray-900;
+  @apply text-2xl font-semibold text-text-primary;
 }
 
 .profile-stat-label {
-  @apply text-sm text-gray-500;
+  @apply text-sm text-text-tertiary;
 }
 
 .profile-edit-button {
@@ -51,11 +51,11 @@
 }
 
 .profile-tabs {
-  @apply flex space-x-1 border-b border-gray-200 mb-6;
+  @apply flex space-x-1 border-b border-border-primary mb-6;
 }
 
 .profile-tab {
-  @apply px-4 py-2 text-gray-600 hover:text-gray-900 border-b-2 border-transparent;
+  @apply px-4 py-2 text-text-secondary hover:text-text-primary border-b-2 border-transparent;
 }
 
 .profile-tab-active {
@@ -63,9 +63,9 @@
 }
 
 .profile-section {
-  @apply bg-white shadow rounded-lg p-6 mb-6;
+  @apply bg-bg-elevated shadow rounded-lg p-6 mb-6;
 }
 
 .profile-achievement {
-  @apply flex items-center p-3 bg-white rounded-lg shadow-sm mb-3 border-l-4 border-primary-500;
+  @apply flex items-center p-3 bg-bg-elevated rounded-lg shadow-sm mb-3 border-l-4 border-primary-500;
 } 
