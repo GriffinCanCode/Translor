@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { useLesson } from '../../contexts/LessonContext';
 
 const ProgressChart = () => {

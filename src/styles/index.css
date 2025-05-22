@@ -1,41 +1,23 @@
+/* Main stylesheet entry point for Translor app */
+
+/* Tailwind base layers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom global styles */
-body {
-  @apply bg-gray-50 text-gray-900 font-sans;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Import global styles */
+@import './globals.css';
+@import './theme.css';
 
-h1, h2, h3, h4, h5, h6 {
-  @apply font-display;
-}
+/* Import module-specific styles */
+@import './common.css';
+@import './layout.css';
+@import './dashboard.css';
+@import './conversation.css';
+@import './lessons.css';
+@import './profile.css';
+@import './settings.css';
 
-/* Custom component classes using Tailwind's @apply */
-@layer components {
-  .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors;
-  }
-  
-  .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
-  }
-  
-  .btn-secondary {
-    @apply bg-secondary-600 text-white hover:bg-secondary-700;
-  }
-  
-  .btn-outline {
-    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50;
-  }
-  
-  .card {
-    @apply bg-white rounded-lg shadow-md p-5;
-  }
-  
-  .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
-  }
-} 
+/* Import utilities */
+@import './animations.css';
+@import './responsive.css';

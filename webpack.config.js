@@ -2,6 +2,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
@@ -10,9 +11,9 @@ module.exports = (env, argv) => {
   return {
     entry: './src/index.js', // Entry point of your React app
     output: {
-      path: path.resolve(__dirname, 'dist'), // Output directory for bundled files
-      filename: isProduction ? '[name].[contenthash].js' : 'bundle.js',
-      publicPath: isProduction ? './' : '/',
+      path: path.resolve(process.cwd(), 'dist'), // Output directory for bundled files
+      filename: isProduction ? '[name].[contenthash].js' : '[name].js',
+      publicPath: './', // Always use relative paths for packaged electron app
       clean: true // Clean the output directory before emit
     },
     target: 'web', // Target environment (web for renderer process)
@@ -20,7 +21,7 @@ module.exports = (env, argv) => {
     devServer: {
       port: 3000, // Port for webpack-dev-server
       static: {
-        directory: path.join(__dirname, 'dist'), // Serve static files from 'dist'
+        directory: path.join(process.cwd(), 'dist'), // Serve static files from 'dist'
       },
       hot: true,
       historyApiFallback: true, // For React Router
@@ -42,6 +43,8 @@ module.exports = (env, argv) => {
           },
           extractComments: false,
         }),
+        // Add CSS minimizer for production builds
+        new CssMinimizerPlugin(),
       ],
       splitChunks: {
         chunks: 'all',
@@ -50,6 +53,12 @@ module.exports = (env, argv) => {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+          },
+          styles: {
+            name: 'styles',
+            test: /\.css$/,
+            chunks: 'all',
+            enforce: true,
           },
         },
       },
@@ -67,8 +76,19 @@ module.exports = (env, argv) => {
           test: /\.css$/,
           use: [
             isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
-            'css-loader',
-            'postcss-loader'
+            {
+              loader: 'css-loader',
+              options: {
+                importLoaders: 1,
+                sourceMap: isDevelopment,
+              }
+            },
+            {
+              loader: 'postcss-loader',
+              options: {
+                sourceMap: isDevelopment,
+              }
+            }
           ]
         },
         {
@@ -98,22 +118,31 @@ module.exports = (env, argv) => {
           minifyURLs: true,
         } : false,
       }),
-      isProduction && new MiniCssExtractPlugin({
-        filename: '[name].[contenthash].css',
-        chunkFilename: '[id].[contenthash].css',
+      // Always include MiniCssExtractPlugin, but configure it based on environment
+      new MiniCssExtractPlugin({
+        filename: isProduction ? '[name].[contenthash].css' : '[name].css',
+        chunkFilename: isProduction ? '[id].[contenthash].css' : '[id].css',
+        // Only emit CSS files in production
+        ignoreOrder: true,
       }),
-    ].filter(Boolean),
+    ],
     resolve: {
       extensions: ['.js', '.jsx'],
+      fullySpecified: false,
       alias: {
-        '@components': path.resolve(__dirname, 'src/components'),
-        '@contexts': path.resolve(__dirname, 'src/contexts'),
-        '@services': path.resolve(__dirname, 'src/services'),
-        '@store': path.resolve(__dirname, 'src/store'),
-        '@styles': path.resolve(__dirname, 'src/styles'),
-        '@utils': path.resolve(__dirname, 'src/utils'),
-        '@lessons': path.resolve(__dirname, 'src/lessons'),
-        '@assets': path.resolve(__dirname, 'assets')
+        '@components': path.resolve(process.cwd(), 'src/components'),
+        '@contexts': path.resolve(process.cwd(), 'src/contexts'),
+        '@services': path.resolve(process.cwd(), 'src/services'),
+        '@store': path.resolve(process.cwd(), 'src/store'),
+        '@styles': path.resolve(process.cwd(), 'src/styles'),
+        '@utils': path.resolve(process.cwd(), 'src/utils'),
+        '@lessons': path.resolve(process.cwd(), 'src/lessons'),
+        '@assets': path.resolve(process.cwd(), 'assets')
+      },
+      // Add this to help with ES Module resolution
+      fallback: {
+        "path": false,
+        "fs": false
       }
     },
   };

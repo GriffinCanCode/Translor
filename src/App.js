@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Import contexts
@@ -15,7 +15,17 @@ import Profile from './components/Profile/Profile';
 import Settings from './components/Settings/Settings';
 import NotFound from './components/Common/NotFound';
 
+// Import utility for CSS validation
+import validateCssFiles from './utils/cssLoader';
+
 function App() {
+  useEffect(() => {
+    // In development mode, validate that all CSS files are loaded properly
+    if (process.env.NODE_ENV === 'development') {
+      validateCssFiles();
+    }
+  }, []);
+
   return (
     <UserProvider>
       <LessonProvider>

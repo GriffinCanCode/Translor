@@ -1,0 +1,38 @@
+/* Layout component styles */
+@layer components {
+  .container-app {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  
+  .main-content {
+    @apply py-6;
+  }
+  
+  .section {
+    @apply mb-8;
+  }
+  
+  .header {
+    @apply bg-white shadow;
+  }
+  
+  .footer {
+    @apply bg-gray-100 py-6 border-t border-gray-200;
+  }
+  
+  .sidebar {
+    @apply w-64 bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto;
+  }
+  
+  .sidebar-nav {
+    @apply py-4 space-y-1;
+  }
+  
+  .sidebar-link {
+    @apply flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-primary-600;
+  }
+  
+  .sidebar-link-active {
+    @apply bg-primary-50 text-primary-600 font-medium;
+  }
+} 
