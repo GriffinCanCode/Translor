@@ -6,18 +6,18 @@ module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
 
   return {
-    entry: './src/index.js', // Entry point of your React app
+    entry: './translor/src/index.js', // Entry point of your React app
     output: {
       path: path.resolve(__dirname, 'dist'), // Output directory for bundled files
       filename: 'bundle.js',
-      publicPath: isDevelopment ? '/' : './', // Correct publicPath for dev vs prod
+      publicPath: './'
     },
     target: 'web', // Target environment (web for renderer process)
     devtool: isDevelopment ? 'eval-source-map' : 'source-map',
     devServer: {
-      port: 8080, // Port for webpack-dev-server
+      port: 3000, // Port for webpack-dev-server
       static: {
-        directory: path.join(__dirname, 'public'), // Serve static files from 'public'
+        directory: path.join(__dirname, 'dist'), // Serve static files from 'dist'
       },
       hot: true,
       historyApiFallback: true, // For React Router
@@ -28,32 +28,29 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
-          test: /\.js|jsx$/,
+          test: /\.(js|jsx)$/,
           exclude: /node_modules/,
           use: {
             loader: 'babel-loader',
-            options: {
-              presets: ['@babel/preset-env', '@babel/preset-react'],
-            },
           },
         },
         {
-          test: /\.css$/i,
-          use: [
-            isDevelopment ? 'style-loader' : MiniCssExtractPlugin.loader,
-            'css-loader',
-            'postcss-loader'
-          ],
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader', 'postcss-loader']
         },
         {
           test: /\.(png|svg|jpg|jpeg|gif)$/i,
           type: 'asset/resource',
         },
+        {
+          test: /\.(woff|woff2|eot|ttf|otf)$/i,
+          type: 'asset/resource',
+        }
       ],
     },
     plugins: [
       new HtmlWebpackPlugin({
-        template: './src/index.html', // Path to your source HTML file
+        template: './translor/src/index.html', // Path to your source HTML file
         filename: 'index.html',
       }),
       !isDevelopment && new MiniCssExtractPlugin({
@@ -62,6 +59,16 @@ module.exports = (env, argv) => {
     ].filter(Boolean),
     resolve: {
       extensions: ['.js', '.jsx'],
+      alias: {
+        '@components': path.resolve(__dirname, 'translor/src/components'),
+        '@contexts': path.resolve(__dirname, 'translor/src/contexts'),
+        '@services': path.resolve(__dirname, 'translor/src/services'),
+        '@store': path.resolve(__dirname, 'translor/src/store'),
+        '@styles': path.resolve(__dirname, 'translor/src/styles'),
+        '@utils': path.resolve(__dirname, 'translor/src/utils'),
+        '@lessons': path.resolve(__dirname, 'translor/src/lessons'),
+        '@assets': path.resolve(__dirname, 'translor/assets')
+      }
     },
   };
 }; 
