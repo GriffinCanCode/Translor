@@ -1,19 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function Settings() {
+  const { theme, setTheme, effectiveTheme } = useTheme();
   const [language, setLanguage] = useState('english');
-  const [theme, setTheme] = useState('light');
   const [notifications, setNotifications] = useState(true);
+  const [savedSettings, setSavedSettings] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('');
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    // Load settings from electron API
+    const loadSettings = async () => {
+      try {
+        const settings = await window.api.getUserSettings();
+        if (settings) {
+          setLanguage(settings.language || 'english');
+          setNotifications(settings.notifications ?? true);
+          setSavedSettings(settings);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Save settings logic would go here
-    console.log('Settings saved:', { language, theme, notifications });
+    try {
+      const newSettings = {
+        ...savedSettings,
+        language,
+        theme,
+        notifications,
+      };
+      
+      await window.api.saveUserSettings(newSettings);
+      setSaveStatus('Settings saved successfully');
+      setSavedSettings(newSettings);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setSaveStatus('Error saving settings');
+    }
   };
 
   return (
-    <div className="settings-container">
-      <h1 className="settings-heading">Settings</h1>
+    <div className="settings-container p-6">
+      <h1 className="settings-heading text-2xl">Settings</h1>
       
       <form onSubmit={handleSubmit}>
         <div className="settings-section">
@@ -47,9 +84,9 @@ function Settings() {
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
             >
+              <option value="system">System Default ({effectiveTheme})</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
-              <option value="system">System Default</option>
             </select>
           </div>
         </div>
@@ -70,6 +107,16 @@ function Settings() {
             </label>
           </div>
         </div>
+        
+        {saveStatus && (
+          <div className={`mt-4 p-3 rounded ${
+            saveStatus.includes('Error') 
+              ? 'bg-red-100 text-red-700' 
+              : 'bg-green-100 text-green-700'
+          }`}>
+            {saveStatus}
+          </div>
+        )}
         
         <div className="flex gap-4 mt-6">
           <button type="submit" className="settings-save-button">

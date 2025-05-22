@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } = require('electron');
 const Store = require('electron-store');
 const store = new Store();
 const isDev = process.env.NODE_ENV === 'development';
@@ -20,7 +20,7 @@ if (!store.has('userSettings')) {
     learningLanguage: 'es',
     dailyGoal: 10,
     notifications: true,
-    theme: 'light'
+    theme: 'system'  // Set default theme to system
   });
 }
 
@@ -257,7 +257,22 @@ ipcMain.handle('update-xp', async (_, amount) => {
 
 ipcMain.handle('save-user-settings', async (_, settings) => {
   store.set('userSettings', settings);
+  
+  // Handle theme changes
+  if (settings.theme === 'system') {
+    nativeTheme.themeSource = 'system';
+  } else {
+    nativeTheme.themeSource = settings.theme;
+  }
+  
   return { success: true };
+});
+
+// Handle system theme changes
+nativeTheme.on('updated', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('system-theme-changed', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  }
 });
 
 ipcMain.handle('unlock-achievement', async (_, achievementId) => {

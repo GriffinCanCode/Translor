@@ -28,7 +28,20 @@ contextBridge.exposeInMainWorld(
     
     // Recording
     startRecording: () => ipcRenderer.send('start-recording'),
-    stopRecording: () => ipcRenderer.invoke('stop-recording')
+    stopRecording: () => ipcRenderer.invoke('stop-recording'),
+    
+    // Theme handling
+    onSystemThemeChange: (callback) => {
+      ipcRenderer.on('system-theme-changed', (_, theme) => callback(theme));
+      return () => {
+        ipcRenderer.removeListener('system-theme-changed', callback);
+      };
+    },
+    
+    // Add any other APIs your app needs
+    saveUserProgress: (progress) => ipcRenderer.invoke('save-user-progress', progress),
+    getLesson: (lessonId) => ipcRenderer.invoke('get-lesson', lessonId),
+    saveLesson: (lesson) => ipcRenderer.invoke('save-lesson', lesson)
   }
 );
 
