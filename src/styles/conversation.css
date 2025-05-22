@@ -19,7 +19,7 @@
 }
 
 .message-received {
-  @apply bg-gray-200 text-gray-800 mr-auto rounded-bl-none;
+  @apply bg-bg-secondary text-text-primary mr-auto rounded-bl-none;
 }
 
 .message-time {
@@ -27,11 +27,11 @@
 }
 
 .chat-input-container {
-  @apply border-t border-gray-200 p-4 bg-white;
+  @apply border-t border-border-primary p-4 bg-bg-primary;
 }
 
 .chat-input {
-  @apply w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  @apply w-full px-4 py-2 border border-border-primary rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
 }
 
 .chat-send-button {

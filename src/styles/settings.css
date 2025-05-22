@@ -4,11 +4,11 @@
 }
 
 .settings-section {
-  @apply bg-white shadow rounded-lg p-6 mb-6;
+  @apply bg-bg-elevated shadow rounded-lg p-6 mb-6;
 }
 
 .settings-heading {
-  @apply text-xl font-bold text-gray-800 mb-4 pb-3 border-b border-gray-200;
+  @apply text-xl font-bold text-text-primary mb-4 pb-3 border-b border-border-primary;
 }
 
 .settings-form-group {
@@ -16,15 +16,15 @@
 }
 
 .settings-label {
-  @apply block text-sm font-medium text-gray-700 mb-2;
+  @apply block text-sm font-medium text-text-secondary mb-2;
 }
 
 .settings-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  @apply w-full px-3 py-2 border border-border-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
 }
 
 .settings-select {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  @apply w-full px-3 py-2 border border-border-primary rounded-md bg-bg-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
 }
 
 .settings-toggle {
@@ -32,7 +32,7 @@
 }
 
 .settings-toggle-slider {
-  @apply inline-block h-4 w-4 transform rounded-full bg-white transition;
+  @apply inline-block h-4 w-4 transform rounded-full bg-bg-primary transition;
 }
 
 .settings-save-button {
@@ -40,5 +40,5 @@
 }
 
 .settings-cancel-button {
-  @apply w-full sm:w-auto px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors;
+  @apply w-full sm:w-auto px-6 py-2 bg-bg-primary border border-border-primary text-text-primary rounded-md hover:bg-bg-secondary transition-colors;
 } 

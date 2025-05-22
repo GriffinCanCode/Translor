@@ -3,19 +3,19 @@
 @import './index.css';
 
 .lesson-card {
-  @apply bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:transform hover:scale-[1.02];
+  @apply bg-bg-elevated rounded-lg shadow-md overflow-hidden transition-transform hover:transform hover:scale-[1.02];
 }
 
 .lesson-header {
-  @apply p-4 border-b border-gray-100;
+  @apply p-4 border-b border-border-primary;
 }
 
 .lesson-title {
-  @apply text-xl font-semibold text-gray-900 mb-1;
+  @apply text-xl font-semibold text-text-primary mb-1;
 }
 
 .lesson-meta {
-  @apply flex items-center text-sm text-gray-500;
+  @apply flex items-center text-sm text-text-tertiary;
 }
 
 .lesson-content {
@@ -23,11 +23,11 @@
 }
 
 .lesson-description {
-  @apply text-gray-600 mb-4;
+  @apply text-text-secondary mb-4;
 }
 
 .lesson-footer {
-  @apply flex justify-between items-center px-4 py-3 bg-gray-50;
+  @apply flex justify-between items-center px-4 py-3 bg-bg-secondary;
 }
 
 .lesson-grid {
@@ -35,7 +35,7 @@
 }
 
 .lesson-progress {
-  @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+  @apply h-2 bg-bg-secondary rounded-full overflow-hidden;
 }
 
 .lesson-progress-bar {

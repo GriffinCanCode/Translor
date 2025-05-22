@@ -12,7 +12,10 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('system');
-  const [systemTheme, setSystemTheme] = useState('light');
+  const [systemTheme, setSystemTheme] = useState(() => {
+    // Initialize with the current system theme
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   // Function to get system theme
   const getSystemTheme = () => {
@@ -39,7 +42,14 @@ export const ThemeProvider = ({ children }) => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     const handleChange = (e) => {
-      setSystemTheme(e.matches ? 'dark' : 'light');
+      const newTheme = e.matches ? 'dark' : 'light';
+      setSystemTheme(newTheme);
+      // If the current theme is 'system', we need to update the effective theme
+      if (theme === 'system') {
+        document.documentElement.classList.remove('theme-light', 'theme-dark');
+        document.documentElement.classList.add(`theme-${newTheme}`);
+        document.documentElement.setAttribute('data-theme', newTheme);
+      }
     };
 
     // Set initial system theme
@@ -57,7 +67,7 @@ export const ThemeProvider = ({ children }) => {
       mediaQuery.removeEventListener('change', handleChange);
       cleanup();
     };
-  }, []);
+  }, [theme]);
 
   // Apply theme to document
   useEffect(() => {
@@ -67,7 +77,6 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.classList.remove('theme-light', 'theme-dark');
     // Add the current theme class
     document.documentElement.classList.add(`theme-${effectiveTheme}`);
-    
     // Also set data-theme attribute for CSS selectors
     document.documentElement.setAttribute('data-theme', effectiveTheme);
   }, [theme, systemTheme]);
@@ -85,7 +94,8 @@ export const ThemeProvider = ({ children }) => {
       theme, 
       setTheme, 
       systemTheme,
-      effectiveTheme: theme === 'system' ? systemTheme : theme 
+      effectiveTheme: theme === 'system' ? systemTheme : theme,
+      currentSystemTheme: systemTheme // Add this to expose the current system theme
     }}>
       {children}
     </ThemeContext.Provider>

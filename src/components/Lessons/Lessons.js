@@ -107,7 +107,7 @@ const Lessons = () => {
             return (
               <div 
                 key={lesson.id}
-                className={`bg-white border rounded-lg shadow-sm overflow-hidden ${
+                className={`bg-bg-elevated border border-border-primary rounded-lg shadow-sm overflow-hidden ${
                   !isUnlocked ? 'opacity-75' : ''
                 }`}
               >

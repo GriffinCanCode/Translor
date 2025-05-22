@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 function Settings() {
-  const { theme, setTheme, effectiveTheme } = useTheme();
+  const { theme, setTheme, effectiveTheme, currentSystemTheme } = useTheme();
   const [language, setLanguage] = useState('english');
   const [notifications, setNotifications] = useState(true);
   const [savedSettings, setSavedSettings] = useState(null);
@@ -77,14 +77,16 @@ function Settings() {
           <h2 className="settings-heading">Display Settings</h2>
           
           <div className="settings-form-group">
-            <label htmlFor="theme" className="settings-label">Theme</label>
+            <label htmlFor="theme" className="settings-label">
+              Theme (Current: {effectiveTheme})
+            </label>
             <select 
               id="theme" 
               className="settings-select"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
             >
-              <option value="system">System Default ({effectiveTheme})</option>
+              <option value="system">System Default (currently {currentSystemTheme})</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
             </select>
